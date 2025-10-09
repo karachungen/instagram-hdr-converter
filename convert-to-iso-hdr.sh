@@ -156,9 +156,8 @@ if ./ultrahdr_app -m 1 -j "$INPUT_FILE" -z "$TEMP_HDR_RAW" -o 1 -O 5 -f "$INPUT_
     if ./ultrahdr_app -m 1 -j "$INPUT_FILE" -z "$TEMP_SDR_RAW" -o 3 -O 3 &> "$TEMP_DIR/sdr_decode.log"; then
         print_success "Decoded to SDR format"
         
-print_success "Decoded to SDR format"
             
-            # Step 3: Create 4:2:0 compressed SDR JPEG using cjpeg
+        # Step 3: Create 4:2:0 compressed SDR JPEG using cjpeg
             print_info "Compressing SDR with YCbCr 4:2:0 subsampling (Instagram format)..."
             
             TEMP_SDR_420="$TEMP_DIR/sdr_420.jpg"

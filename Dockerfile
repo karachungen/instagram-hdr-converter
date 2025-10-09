@@ -12,6 +12,7 @@ RUN apt-get update && apt-get install -y \
     ffmpeg \
     libjpeg-dev \
     imagemagick \
+    libjpeg-turbo-progs \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
