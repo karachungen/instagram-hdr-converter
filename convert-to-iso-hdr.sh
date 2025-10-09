@@ -156,15 +156,31 @@ if ./ultrahdr_app -m 1 -j "$INPUT_FILE" -z "$TEMP_HDR_RAW" -o 1 -O 5 -f "$INPUT_
     if ./ultrahdr_app -m 1 -j "$INPUT_FILE" -z "$TEMP_SDR_RAW" -o 3 -O 3 &> "$TEMP_DIR/sdr_decode.log"; then
         print_success "Decoded to SDR format"
         
-        print_info "Creating 4:2:0 SDR JPEG..."
-        TEMP_SDR_420="$TEMP_DIR/sdr_420.jpg"
-        FFMPEG_QUALITY=$((31 - (QUALITY * 31 / 100)))
-        
-        if ffmpeg -f rawvideo -pix_fmt rgba -s "${IMAGE_WIDTH}x${IMAGE_HEIGHT}" -i "$TEMP_SDR_RAW" \
-            -pix_fmt yuvj420p -q:v $FFMPEG_QUALITY "$TEMP_SDR_420" -y &> "$TEMP_DIR/sdr_encode.log"; then
-            print_success "Created 4:2:0 SDR JPEG"
-        else
-            print_error "Failed to create 4:2:0 SDR JPEG"
+print_success "Decoded to SDR format"
+            
+            # Step 3: Create 4:2:0 compressed SDR JPEG using cjpeg
+            print_info "Compressing SDR with YCbCr 4:2:0 subsampling (Instagram format)..."
+            
+            TEMP_SDR_420="$TEMP_DIR/sdr_420.jpg"
+            
+            # Convert RAW to PPM first, then compress with cjpeg
+            # RGBA8888 format: 4 bytes per pixel
+            if command -v convert &> /dev/null; then
+                # Use ImageMagick to convert raw to temp format, then cjpeg for 4:2:0
+                convert -size ${IMAGE_WIDTH}x${IMAGE_HEIGHT} -depth 8 rgba:"$TEMP_SDR_RAW" \
+                    -colorspace sRGB \
+                    -quality 100 \
+                    ppm:- 2>/dev/null | \
+                cjpeg -quality 100 -sample 2x2 -progressive -optimize > "$TEMP_SDR_420" 2>/dev/null
+                
+                if [ $? -eq 0 ] && [ -s "$TEMP_SDR_420" ]; then
+                    print_success "Created 4:2:0 SDR base image"
+                else
+                    print_error "Failed to create 4:2:0 SDR image"
+                    exit 1
+                fi
+            else
+                print_error "ImageMagick not found, cannot convert RAW format"
             exit 1
         fi
     else

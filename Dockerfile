@@ -11,6 +11,7 @@ RUN apt-get update && apt-get install -y \
     exiftool \
     ffmpeg \
     libjpeg-dev \
+    imagemagick \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
