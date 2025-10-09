@@ -1,5 +1,36 @@
 # HDR ISO Conversion Docker Container
 
+## 📸 How to Upload HDR Photos to Instagram
+
+Follow these steps to upload HDR photos to Instagram through the website:
+
+### 1. Export HDR Image from Lightroom
+Export your image in HDR format from Lightroom with these settings:
+- **Enable HDR Output** ✅
+- **Color Space:** HDR sRGB (Rec. 709)
+
+### 2. Convert HDR to Instagram-Compatible Format
+Run the conversion command using the Docker image for quick setup:
+```bash
+docker run -v $(pwd):/data karachungen/instagram-hdr-converter image-hdr.jpg
+```
+
+This will create `image-hdr-iso.jpg` that Instagram can process.
+
+### 3. Upload to Instagram Website
+Upload the converted `image-hdr-iso.jpg` through Instagram's website with these important settings:
+- **Select Original Ratio** - don't crop the photo
+- **Keep photo size within Instagram's supported format** to avoid compression:
+  - Square (1:1): 1080 x 1080 pixels
+  - Landscape (1.91:1): 1080 x 566 pixels  
+  - Portrait (4:5): 1080 x 1350 pixels 
+- **Don't apply filters or corrections**
+- **Note:** The preview will show as SDR, but after upload completion, it will display as HDR
+
+---
+
+## About This Container
+
 This Docker container includes:
 - **exiftool** - For reading and writing image metadata
 - **ffmpeg** - Media conversion tool
