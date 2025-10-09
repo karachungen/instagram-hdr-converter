@@ -1,5 +1,3 @@
-# HDR ISO Conversion Docker Container
-
 ## 📸 How to Upload HDR Photos to Instagram
 
 Follow these steps to upload HDR photos to Instagram through the website:
