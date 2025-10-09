@@ -25,7 +25,6 @@ print_info() {
 check_dependencies() {
     local missing_deps=()
     ! command -v exiftool &> /dev/null && missing_deps+=("exiftool")
-    ! command -v ffmpeg &> /dev/null && missing_deps+=("ffmpeg")
     
     if [ ${#missing_deps[@]} -ne 0 ]; then
         print_error "Missing dependencies: ${missing_deps[*]}"

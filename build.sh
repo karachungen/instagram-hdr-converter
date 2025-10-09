@@ -8,13 +8,13 @@ YELLOW='\033[1;33m'
 NC='\033[0m'
 
 echo -e "${YELLOW}Building HDR ISO Converter Docker image...${NC}"
-docker build -t hdr-iso-converter .
+docker build -t karachungen/instagram-hdr-converter .
 
 echo -e "${GREEN}✓ Build complete!${NC}"
 echo ""
 echo "Test the image with:"
-echo "  docker run --rm hdr-iso-converter --help"
+echo "  docker run --rm karachungen/instagram-hdr-converter --help"
 echo ""
 echo "Convert an image:"
-echo "  docker run --rm -v \$(pwd):/data hdr-iso-converter input.jpg output.jpg"
+echo "  docker run --rm -v \$(pwd):/data karachungen/instagram-hdr-converter input.jpg output.jpg"
 

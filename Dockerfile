@@ -9,7 +9,7 @@ RUN apt-get update && apt-get install -y \
     cmake \
     git \
     exiftool \
-    ffmpeg \
+    # ffmpeg \
     libjpeg-dev \
     imagemagick \
     libjpeg-turbo-progs \
