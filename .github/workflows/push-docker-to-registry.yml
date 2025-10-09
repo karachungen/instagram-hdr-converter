@@ -29,4 +29,5 @@
             with:
               context: . # Path to your Dockerfile context
               push: true
+              platforms: linux/amd64,linux/arm64
               tags: ${{ secrets.DOCKER_USERNAME }}/instagram-hdr-converter:latest # Replace with your Docker Hub username and repository name
