@@ -24,12 +24,6 @@ export default defineNuxtConfig({
 
   css: ['~/assets/css/main.css'],
 
-  vue: {
-    compilerOptions: {
-      isCustomElement: tag => tag === 'img-comparison-slider',
-    },
-  },
-
   app: {
     head: {
       title: 'Instagram HDR Converter',

@@ -1,10 +1,14 @@
+<!-- eslint-disable vue/no-deprecated-slot-attribute -->
+<!-- eslint-disable vue/no-deprecated-slot-attribute -->
+<!-- eslint-disable vue/no-deprecated-slot-attribute -->
 <script setup lang="ts">
 /**
  * Image Comparison Component
- * Uses img-comparison-slider web component for before/after comparison
+ * Uses @img-comparison-slider/vue for before/after comparison
  */
 
 import type { HdrProcessResult } from '~/composables/useHdrProcessor'
+import { ImgComparisonSlider } from '@img-comparison-slider/vue'
 import { formatBytes } from '~/utils/format'
 
 interface Props {
@@ -13,13 +17,6 @@ interface Props {
 }
 
 const props = defineProps<Props>()
-
-// Register web component
-onMounted(() => {
-  if (typeof window !== 'undefined' && !customElements.get('img-comparison-slider')) {
-    import('img-comparison-slider')
-  }
-})
 
 const compressionRatio = computed(() => {
   if (!props.result.processedSize || !props.result.originalSize)
@@ -51,29 +48,17 @@ const sizeReduction = computed(() => {
 
     <!-- Image Comparison Slider -->
     <div class="comparison-container">
-      <img-comparison-slider class="comparison-slider">
-        <template #first>
-          <img
-
-            :src="result.beforeImage"
-            alt="Before processing"
-            class="comparison-image"
-          >
-        </template>
-        <template #second>
-          <img
-
-            :src="result.afterImage"
-            alt="After processing"
-            class="comparison-image"
-          >
-        </template>
-        <template #handle>
-          <div class="comparison-handle">
-            <UIcon name="i-lucide-move-horizontal" class="text-2xl" />
-          </div>
-        </template>
-      </img-comparison-slider>
+      <ImgComparisonSlider class="comparison-slider">
+        <!-- eslint-disable -->
+        <!-- <template #first> -->
+          <img slot="first" :src="result.beforeImage" style="width: 100%;" alt="Before processing"
+            class="comparison-image">
+        <!-- </template> -->
+          <img slot="second" :src="result.afterImage" style="width: 100%; " alt="After processing"
+            class="comparison-image">
+        <div />
+        <!-- eslint-disable -->
+      </ImgComparisonSlider>
 
       <!-- Labels -->
       <div class="comparison-labels">
@@ -124,7 +109,8 @@ const sizeReduction = computed(() => {
           <div class="stat-label">
             Size Change
           </div>
-          <div class="stat-value" :class="sizeReduction > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">
+          <div class="stat-value"
+            :class="sizeReduction > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">
             {{ sizeReduction > 0 ? '-' : '+' }}{{ formatBytes(Math.abs(sizeReduction)) }}
             <span class="text-xs">
               ({{ compressionRatio }}%)
@@ -156,7 +142,7 @@ const sizeReduction = computed(() => {
 
   display: block;
   width: 100%;
-  aspect-ratio: 16 / 9;
+  aspect-ratio: auto;
 }
 
 .comparison-image {
@@ -228,7 +214,7 @@ const sizeReduction = computed(() => {
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .comparison-slider {
-    aspect-ratio: 4 / 3;
+    /* aspect-ratio: 4 / 3; */
   }
 
   .comparison-handle {
