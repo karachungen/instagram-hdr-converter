@@ -150,7 +150,10 @@ export function useWasm(): UseWasmReturn {
 
       // Step 3: Create module configuration
       addLog('Step 3: Configuring module...', 'info')
+
       const moduleConfig: WasmModuleConfig = {
+        // Prevent automatic execution of main() on initialization
+        noInitialRun: true,
         print: (text: string) => addLog(`[WASM-OUT] ${text}`, 'info'),
         printErr: (text: string) => addLog(`[WASM-ERR] ${text}`, 'error'),
         onRuntimeInitialized: () => addLog('✓ onRuntimeInitialized callback triggered!', 'success'),

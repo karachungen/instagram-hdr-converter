@@ -1,26 +1,12 @@
 <script setup lang="ts">
 interface Props {
-  fileInputValue: File[]
   isInitializing: boolean
   wasmError: string | null
 }
 
-interface Emits {
-  (e: 'update:fileInputValue', value: File[]): void
-  (e: 'filesSelected', filesOrEvent: File[] | Event): void
-}
+defineProps<Props>()
 
-const props = defineProps<Props>()
-const emit = defineEmits<Emits>()
-
-const localValue = computed({
-  get: () => props.fileInputValue,
-  set: value => emit('update:fileInputValue', value),
-})
-
-function handleChange(filesOrEvent: File[] | Event): void {
-  emit('filesSelected', filesOrEvent)
-}
+const fileInputValue = defineModel<File[]>({ default: [] })
 </script>
 
 <template>
@@ -31,7 +17,7 @@ function handleChange(filesOrEvent: File[] | Event): void {
     </h2>
 
     <UFileUpload
-      v-model="localValue"
+      v-model="fileInputValue"
       icon="i-lucide-image"
       label="Drop your HDR images here"
       description="AVIF, HEIF, JPG - Multiple files supported"
@@ -39,7 +25,6 @@ function handleChange(filesOrEvent: File[] | Event): void {
       accept="image/*"
       layout="grid"
       :disabled="isInitializing || !!wasmError"
-      @change="handleChange"
     />
   </section>
 </template>

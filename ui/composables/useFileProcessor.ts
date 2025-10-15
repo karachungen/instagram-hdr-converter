@@ -20,7 +20,7 @@ interface UseFileProcessorReturn {
  */
 export function useFileProcessor(): UseFileProcessorReturn {
   const files = useState<ProcessingFile[]>('files', () => [])
-  const isProcessing = useState<boolean>('isProcessing', () => false)
+  const isProcessing = ref(false)
   const { add: addLog } = useLogs()
 
   /**
@@ -75,10 +75,13 @@ export function useFileProcessor(): UseFileProcessorReturn {
   const addFiles = (fileList: FileList | File[]): void => {
     const fileArray = Array.from(fileList)
     addLog(`Adding ${fileArray.length} file(s) to list...`, 'info')
+    console.log('[DEBUG] addFiles called with:', fileArray.length, 'files')
+    console.log('[DEBUG] Current files.value.length:', files.value.length)
 
-    fileArray.forEach(async (file) => {
+    fileArray.forEach((file) => {
+      const fileId = generateFileId()
       const fileObj: ProcessingFile = {
-        id: generateFileId(),
+        id: fileId,
         file,
         name: file.name,
         size: file.size,
@@ -89,21 +92,34 @@ export function useFileProcessor(): UseFileProcessorReturn {
         progress: 0,
       }
 
-      files.value.push(fileObj)
+      console.log('[DEBUG] Adding file:', fileObj.name, 'id:', fileId)
 
-      try {
-        fileObj.data = await readFileData(file)
-        fileObj.status = 'ready'
-        addLog(`  ✓ Loaded ${fileObj.name}: ${formatFileSize(fileObj.data.length)}`, 'success')
-      }
-      catch {
+      // Add to array with immutable update
+      files.value = [...files.value, fileObj]
+
+      console.log('[DEBUG] After adding, files.value.length:', files.value.length)
+
+      // Load file data asynchronously and update status reactively
+      readFileData(file).then((data) => {
+        // Update by creating new array (triggers reactivity)
+        files.value = files.value.map(f =>
+          f.id === fileId
+            ? { ...f, data, status: 'ready' as const }
+            : f,
+        )
+        addLog(`  ✓ Loaded ${fileObj.name}: ${formatFileSize(data.length)}`, 'success')
+      }).catch(() => {
+        // Update by creating new array (triggers reactivity)
+        files.value = files.value.map(f =>
+          f.id === fileId
+            ? { ...f, status: 'error' as const, error: 'Failed to read file' }
+            : f,
+        )
         addLog(`  ✗ Failed to load ${fileObj.name}`, 'error')
-        fileObj.status = 'error'
-        fileObj.error = 'Failed to read file'
-      }
+      })
     })
 
-    addLog(`Total files: ${files.value.length}`, 'info')
+    addLog(`Total files being added: ${fileArray.length}`, 'info')
   }
 
   /**

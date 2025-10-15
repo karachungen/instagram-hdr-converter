@@ -60,6 +60,7 @@ export interface WasmModule {
 }
 
 export interface WasmModuleConfig {
+  noInitialRun?: boolean
   print?: (text: string) => void
   printErr?: (text: string) => void
   onRuntimeInitialized?: () => void

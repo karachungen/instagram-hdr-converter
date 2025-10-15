@@ -78,12 +78,19 @@ export function useHdrProcessor() {
       }
 
       // Run decode command: -m 1 (mode 1), -j input, -z output
+      const decodeArgs = ['-m', '1', '-j', inputPath, '-z', outputPath]
+      addLog(`[HDR Decode] Calling: ultrahdr_app ${decodeArgs.join(' ')}`, 'info')
+      console.log('[WASM CMD] Decode:', decodeArgs)
+
       if (wasmModule.callMain) {
         try {
-          wasmModule.callMain(['-m', '1', '-j', inputPath, '-z', outputPath])
+          const result = wasmModule.callMain(decodeArgs)
+          console.log('[WASM RESULT] Decode returned:', result)
+          addLog(`[HDR Decode] Command returned: ${result}`, 'info')
         }
         catch (error) {
           const err = error as Error
+          console.error('[WASM ERROR] Decode failed:', err)
           addLog(`[HDR Decode] WASM execution error: ${err.message}`, 'warning')
         }
       }
@@ -146,8 +153,8 @@ export function useHdrProcessor() {
         throw new Error(`Input file not found: ${inputPath}`)
       }
 
-      // Run encode command: -m 0 (mode 0), -p input, -w width, -h height, -y output (if needed)
-      const args = [
+      // Run encode command: -m 0 (mode 0), -p input, -w width, -h height, - output (if needed)
+      const encodeArgs = [
         '-m',
         '0',
         '-p',
@@ -160,15 +167,21 @@ export function useHdrProcessor() {
 
       // Some versions may need output path specified
       if (outputPath !== '/output.jpg') {
-        args.push('-y', outputPath)
+        encodeArgs.push('-z', outputPath)
       }
+
+      addLog(`[HDR Encode] Calling: ultrahdr_app ${encodeArgs.join(' ')}`, 'info')
+      console.log('[WASM CMD] Encode:', encodeArgs)
 
       if (wasmModule.callMain) {
         try {
-          wasmModule.callMain(args)
+          const result = wasmModule.callMain(encodeArgs)
+          console.log('[WASM RESULT] Encode returned:', result)
+          addLog(`[HDR Encode] Command returned: ${result}`, 'info')
         }
         catch (error) {
           const err = error as Error
+          console.error('[WASM ERROR] Encode failed:', err)
           addLog(`[HDR Encode] WASM execution error: ${err.message}`, 'warning')
         }
       }
@@ -212,6 +225,7 @@ export function useHdrProcessor() {
   ): Promise<HdrProcessResult> {
     const startTime = performance.now()
     addLog(`\n=== HDR Processing Started: ${file.name} ===`, 'info')
+    console.log('[HDR] Starting processing for:', file.name, 'size:', file.size)
 
     try {
       // Get image dimensions

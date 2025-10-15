@@ -38,5 +38,6 @@ export default antfu({
     'ts/no-unsafe-assignment': 'off',
     'ts/no-unsafe-argument': 'off',
     'vars-on-top': 'off',
+    'no-console': 'off', // Allow console for debugging
   },
 })

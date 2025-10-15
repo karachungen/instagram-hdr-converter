@@ -41,6 +41,17 @@ onMounted(async () => {
 })
 
 /**
+ * Watch fileInputValue and automatically add files
+ */
+watch(fileInputValue, (newFiles) => {
+  console.log('[DEBUG] fileInputValue changed:', newFiles.length, 'files')
+  if (newFiles && newFiles.length > 0) {
+    console.log('[DEBUG] Adding files via watch')
+    addFiles(newFiles)
+  }
+}, { deep: true })
+
+/**
  * Watch for WASM readiness
  */
 watch(wasmReady, (ready) => {
@@ -67,28 +78,6 @@ watch(wasmError, (error) => {
     })
   }
 })
-
-/**
- * Handle file selection
- */
-function handleFilesSelected(filesOrEvent: File[] | Event): void {
-  let selectedFiles: FileList | File[] | null = null
-
-  // Check if it's an array of files (from UFileUpload drag-and-drop)
-  if (Array.isArray(filesOrEvent)) {
-    selectedFiles = filesOrEvent
-  }
-  // Check if it's an Event (from input change)
-  else if (filesOrEvent && 'target' in filesOrEvent) {
-    const input = (filesOrEvent as Event).target as HTMLInputElement | null
-    selectedFiles = input?.files || null
-  }
-
-  if (selectedFiles && selectedFiles.length > 0) {
-    addFiles(selectedFiles)
-    fileInputValue.value = []
-  }
-}
 
 /**
  * Process files
@@ -223,10 +212,9 @@ onUnmounted(() => {
         <div class="space-y-6">
           <!-- File Upload Section -->
           <FileUploadSection
-            v-model:file-input-value="fileInputValue"
+            v-model="fileInputValue"
             :is-initializing="isInitializing"
             :wasm-error="wasmError"
-            @files-selected="handleFilesSelected"
           />
 
           <!-- File List Section -->
