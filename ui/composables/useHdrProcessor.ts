@@ -50,15 +50,15 @@ export function useHdrProcessor() {
   }
 
   /**
-   * Step 1: Decode HDR to RAW
+   * Step 1: Decode HDR to RAW (with fresh WASM module)
    * Command: ultrahdr_app -m 1 -j image.jpg -z image.raw
    */
   async function decodeHdrToRaw(
-    wasmModule: WasmModule,
+    inputData: Uint8Array,
     inputPath: string,
     outputPath: string,
     onProgress: (step: ProcessingStep) => void,
-  ): Promise<void> {
+  ): Promise<Uint8Array> {
     onProgress({
       step: 'decode',
       status: 'in_progress',
@@ -68,41 +68,32 @@ export function useHdrProcessor() {
 
     addLog(`[HDR Decode] Starting: ${inputPath} → ${outputPath}`, 'info')
 
-    try {
-      // Verify input file exists
-      try {
-        wasmModule.FS.stat(inputPath)
-      }
-      catch {
-        throw new Error(`Input file not found: ${inputPath}`)
-      }
+    const { reinitWasm } = useWasm()
 
-      // Run decode command: -m 1 (mode 1), -j input, -z output
+    try {
+      // Create fresh WASM module for decode
+      addLog('[HDR Decode] Creating fresh WASM instance...', 'info')
+      const freshModule = await reinitWasm()
+
+      // Write input file to fresh FS
+      freshModule.FS.writeFile(inputPath, inputData)
+      console.log('[FS] Wrote input file:', inputPath)
+
+      // Run decode command
       const decodeArgs = ['-m', '1', '-j', inputPath, '-z', outputPath]
       addLog(`[HDR Decode] Calling: ultrahdr_app ${decodeArgs.join(' ')}`, 'info')
       console.log('[WASM CMD] Decode:', decodeArgs)
 
-      if (wasmModule.callMain) {
-        try {
-          const result = wasmModule.callMain(decodeArgs)
-          console.log('[WASM RESULT] Decode returned:', result)
-          addLog(`[HDR Decode] Command returned: ${result}`, 'info')
-        }
-        catch (error) {
-          const err = error as Error
-          console.error('[WASM ERROR] Decode failed:', err)
-          addLog(`[HDR Decode] WASM execution error: ${err.message}`, 'warning')
-        }
+      if (freshModule.callMain) {
+        const result = freshModule.callMain(decodeArgs)
+        console.log('[WASM RESULT] Decode returned:', result)
+        addLog(`[HDR Decode] Command returned: ${result}`, 'info')
       }
 
-      // Check if output was created
-      try {
-        const stats = wasmModule.FS.stat(outputPath)
-        addLog(`[HDR Decode] Success: ${outputPath} (${stats.size} bytes)`, 'success')
-      }
-      catch {
-        throw new Error('Decode failed: output file not created')
-      }
+      // Read RAW output from FS and save to browser memory
+      const rawData = freshModule.FS.readFile(outputPath)
+      console.log('[FS] Read RAW from FS, size:', rawData.length)
+      addLog(`[HDR Decode] Success: RAW data (${rawData.length} bytes)`, 'success')
 
       onProgress({
         step: 'decode',
@@ -110,31 +101,34 @@ export function useHdrProcessor() {
         message: 'HDR decoded successfully',
         progress: 100,
       })
+
+      return rawData
     }
-    catch (error: any) {
-      const errorMsg = error?.message || String(error)
+    catch (error) {
+      const err = error as Error
+      const errorMsg = err?.message || String(error)
       addLog(`[HDR Decode] Error: ${errorMsg}`, 'error')
       onProgress({
         step: 'decode',
         status: 'error',
         message: errorMsg,
       })
-      throw error
+      throw err
     }
   }
 
   /**
-   * Step 2: Encode RAW to HDR
+   * Step 2: Encode RAW to HDR (with fresh WASM module)
    * Command: ultrahdr_app -m 0 -p image.raw -w 1080 -h 1080
    */
   async function encodeRawToHdr(
-    wasmModule: WasmModule,
+    rawData: Uint8Array,
     inputPath: string,
     outputPath: string,
     width: number,
     height: number,
     onProgress: (step: ProcessingStep) => void,
-  ): Promise<void> {
+  ): Promise<Uint8Array> {
     onProgress({
       step: 'encode',
       status: 'in_progress',
@@ -144,16 +138,19 @@ export function useHdrProcessor() {
 
     addLog(`[HDR Encode] Starting: ${inputPath} → ${outputPath} (${width}x${height})`, 'info')
 
-    try {
-      // Verify input file exists
-      try {
-        wasmModule.FS.stat(inputPath)
-      }
-      catch {
-        throw new Error(`Input file not found: ${inputPath}`)
-      }
+    const { reinitWasm } = useWasm()
 
-      // Run encode command: -m 0 (mode 0), -p input, -w width, -h height, - output (if needed)
+    try {
+      // Create fresh WASM module for encode
+      addLog('[HDR Encode] Creating fresh WASM instance...', 'info')
+      const freshModule = await reinitWasm()
+
+      // Write RAW file from browser memory to fresh FS
+      freshModule.FS.writeFile(inputPath, rawData)
+      console.log('[FS] Wrote RAW file to fresh FS:', inputPath, 'size:', rawData.length)
+      addLog(`[HDR Encode] RAW file restored: ${rawData.length} bytes`, 'info')
+
+      // Run encode command
       const encodeArgs = [
         '-m',
         '0',
@@ -163,37 +160,23 @@ export function useHdrProcessor() {
         String(width),
         '-h',
         String(height),
+        '-z',
+        outputPath,
       ]
-
-      // Some versions may need output path specified
-      if (outputPath !== '/output.jpg') {
-        encodeArgs.push('-z', outputPath)
-      }
 
       addLog(`[HDR Encode] Calling: ultrahdr_app ${encodeArgs.join(' ')}`, 'info')
       console.log('[WASM CMD] Encode:', encodeArgs)
 
-      if (wasmModule.callMain) {
-        try {
-          const result = wasmModule.callMain(encodeArgs)
-          console.log('[WASM RESULT] Encode returned:', result)
-          addLog(`[HDR Encode] Command returned: ${result}`, 'info')
-        }
-        catch (error) {
-          const err = error as Error
-          console.error('[WASM ERROR] Encode failed:', err)
-          addLog(`[HDR Encode] WASM execution error: ${err.message}`, 'warning')
-        }
+      if (freshModule.callMain) {
+        const result = freshModule.callMain(encodeArgs)
+        console.log('[WASM RESULT] Encode returned:', result)
+        addLog(`[HDR Encode] Command returned: ${result}`, 'info')
       }
 
-      // Check if output was created
-      try {
-        const stats = wasmModule.FS.stat(outputPath)
-        addLog(`[HDR Encode] Success: ${outputPath} (${stats.size} bytes)`, 'success')
-      }
-      catch {
-        throw new Error('Encode failed: output file not created')
-      }
+      // Read output from FS and save to browser memory
+      const outputData = freshModule.FS.readFile(outputPath)
+      console.log('[FS] Read output from FS, size:', outputData.length)
+      addLog(`[HDR Encode] Success: output data (${outputData.length} bytes)`, 'success')
 
       onProgress({
         step: 'encode',
@@ -201,24 +184,28 @@ export function useHdrProcessor() {
         message: 'HDR encoded successfully',
         progress: 100,
       })
+
+      return outputData
     }
-    catch (error: any) {
-      const errorMsg = error?.message || String(error)
+    catch (error) {
+      const err = error as Error
+      const errorMsg = err?.message || String(error)
       addLog(`[HDR Encode] Error: ${errorMsg}`, 'error')
       onProgress({
         step: 'encode',
         status: 'error',
         message: errorMsg,
       })
-      throw error
+      throw err
     }
   }
 
   /**
    * Process complete HDR conversion pipeline
+   * Uses fresh WASM instances and browser memory for data transfer
    */
   async function processHdrImage(
-    wasmModule: WasmModule,
+    _wasmModule: WasmModule,
     file: File,
     fileData: Uint8Array,
     onProgress: (step: ProcessingStep) => void,
@@ -234,22 +221,21 @@ export function useHdrProcessor() {
 
       // Create unique filenames
       const timestamp = Date.now()
-      const inputPath = `/input_${timestamp}.jpg`
+      const inputJpgPath = `/input_${timestamp}.jpg`
       const rawPath = `/temp_${timestamp}.raw`
       const outputPath = `/output_${timestamp}.jpg`
 
-      // Write input file to WASM filesystem
-      wasmModule.FS.writeFile(inputPath, fileData)
-      addLog(`Input file written: ${inputPath}`, 'info')
+      // Step 1: Decode with fresh WASM instance
+      // Returns RAW data stored in browser memory
+      console.log('[HDR] Step 1/2: Decoding...')
+      const rawData = await decodeHdrToRaw(fileData, inputJpgPath, rawPath, onProgress)
+      console.log('[HDR] RAW data saved in browser:', rawData.length, 'bytes')
 
-      // Step 1: Decode HDR to RAW
-      await decodeHdrToRaw(wasmModule, inputPath, rawPath, onProgress)
-
-      // Step 2: Encode RAW to HDR with proper dimensions
-      await encodeRawToHdr(wasmModule, rawPath, outputPath, width, height, onProgress)
-
-      // Read processed file
-      const processedData = wasmModule.FS.readFile(outputPath)
+      // Step 2: Encode with fresh WASM instance
+      // Uses RAW data from browser memory
+      console.log('[HDR] Step 2/2: Encoding...')
+      const processedData = await encodeRawToHdr(rawData, rawPath, outputPath, width, height, onProgress)
+      console.log('[HDR] Processed data in browser:', processedData.length, 'bytes')
 
       // Create data URLs for comparison
       const beforeBlob = new Blob([fileData as BlobPart], { type: file.type })
@@ -258,16 +244,8 @@ export function useHdrProcessor() {
       const beforeImage = URL.createObjectURL(beforeBlob)
       const afterImage = URL.createObjectURL(afterBlob)
 
-      // Cleanup WASM filesystem
-      try {
-        wasmModule.FS.unlink(inputPath)
-        wasmModule.FS.unlink(rawPath)
-        wasmModule.FS.unlink(outputPath)
-        addLog('Temporary files cleaned up', 'info')
-      }
-      catch (e) {
-        addLog(`Cleanup warning: ${e}`, 'warning')
-      }
+      // No FS cleanup needed - each step uses fresh WASM instance
+      addLog('Using fresh WASM instances - no cleanup needed', 'info')
 
       const duration = ((performance.now() - startTime) / 1000).toFixed(2)
       addLog(`=== HDR Processing Complete: ${file.name} (${duration}s) ===\n`, 'success')

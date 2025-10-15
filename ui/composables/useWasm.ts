@@ -6,6 +6,7 @@ interface UseWasmReturn {
   wasmError: Readonly<Ref<string | null>>
   initWasm: () => Promise<void>
   resetWasm: () => void
+  reinitWasm: () => Promise<WasmModule>
 }
 
 /**
@@ -248,11 +249,38 @@ export function useWasm(): UseWasmReturn {
     wasmError.value = null
   }
 
+  /**
+   * Reinitialize WASM module (create fresh instance)
+   */
+  const reinitWasm = async (): Promise<WasmModule> => {
+    console.log('[WASM] Creating fresh instance')
+
+    // Get UltraHDRModule from global scope
+    const moduleFactory = (typeof UltraHDRModule !== 'undefined')
+      ? UltraHDRModule
+      : window.UltraHDRModule
+
+    if (!moduleFactory) {
+      throw new Error('UltraHDRModule not available')
+    }
+
+    const moduleConfig: WasmModuleConfig = {
+      noInitialRun: true,
+      print: (text: string) => addLog(`[WASM] ${text}`, 'info'),
+      printErr: (text: string) => addLog(`[WASM] ${text}`, 'error'),
+    }
+
+    const freshModule = await moduleFactory(moduleConfig)
+    console.log('[WASM] Fresh module ready')
+    return freshModule
+  }
+
   return {
     wasmModule: readonly(wasmModule),
     wasmReady: readonly(wasmReady),
     wasmError: readonly(wasmError),
     initWasm,
     resetWasm,
+    reinitWasm,
   }
 }
