@@ -9,6 +9,7 @@
 
 import type { HdrProcessResult } from '~/composables/useHdrProcessor'
 import { ImgComparisonSlider } from '@img-comparison-slider/vue'
+import { downloadImage } from '~/utils/download'
 import { formatBytes } from '~/utils/format'
 
 interface Props {
@@ -17,6 +18,7 @@ interface Props {
 }
 
 const props = defineProps<Props>()
+const toast = useToast()
 
 const compressionRatio = computed(() => {
   if (!props.result.processedSize || !props.result.originalSize)
@@ -27,6 +29,32 @@ const compressionRatio = computed(() => {
 const sizeReduction = computed(() => {
   return props.result.originalSize - props.result.processedSize
 })
+
+/**
+ * Download the processed image
+ */
+function handleDownload(): void {
+  try {
+    const baseName = props.fileName.replace(/\.[^/.]+$/, '') // Remove extension
+    const filename = `${baseName}_processed.jpg`
+    downloadImage(props.result.afterImage, filename)
+
+    toast.add({
+      title: 'Download Started',
+      description: `Downloading ${filename}`,
+      icon: 'i-lucide-download',
+      color: 'success',
+    })
+  }
+  catch (error) {
+    toast.add({
+      title: 'Download Failed',
+      description: error instanceof Error ? error.message : 'Unknown error',
+      icon: 'i-lucide-alert-circle',
+      color: 'error',
+    })
+  }
+}
 </script>
 
 <template>
@@ -39,10 +67,21 @@ const sizeReduction = computed(() => {
             {{ fileName }}
           </h3>
         </div>
-        <UBadge color="success" variant="soft">
-          <UIcon name="i-lucide-check-circle" class="mr-1" />
-          Processed
-        </UBadge>
+        <div class="flex items-center gap-2">
+          <UButton
+            icon="i-lucide-download"
+            color="primary"
+            variant="soft"
+            size="sm"
+            @click="handleDownload"
+          >
+            Download
+          </UButton>
+          <UBadge color="success" variant="soft">
+            <UIcon name="i-lucide-check-circle" class="mr-1" />
+            Processed
+          </UBadge>
+        </div>
       </div>
     </template>
 
@@ -213,10 +252,6 @@ const sizeReduction = computed(() => {
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
-  .comparison-slider {
-    /* aspect-ratio: 4 / 3; */
-  }
-
   .comparison-handle {
     width: 48px;
     height: 48px;

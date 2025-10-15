@@ -4,11 +4,13 @@ interface Props {
   isProcessing: boolean
   showLogs: boolean
   wasmReady: boolean
+  completedFilesCount: number
 }
 
 interface Emits {
   (e: 'process'): void
   (e: 'toggleLogs'): void
+  (e: 'downloadAll'): void
 }
 
 defineProps<Props>()
@@ -20,6 +22,10 @@ function handleProcess(): void {
 
 function handleToggleLogs(): void {
   emit('toggleLogs')
+}
+
+function handleDownloadAll(): void {
+  emit('downloadAll')
 }
 </script>
 
@@ -43,6 +49,22 @@ function handleToggleLogs(): void {
           >
             ⌘P
           </kbd>
+        </template>
+      </UButton>
+
+      <UButton
+        label="Download All"
+        icon="i-lucide-download"
+        color="success"
+        variant="outline"
+        size="lg"
+        :disabled="completedFilesCount === 0"
+        @click="handleDownloadAll"
+      >
+        <template #trailing>
+          <UBadge v-if="completedFilesCount > 0" color="success" variant="solid" size="xs">
+            {{ completedFilesCount }}
+          </UBadge>
         </template>
       </UButton>
 

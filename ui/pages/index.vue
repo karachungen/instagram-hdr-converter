@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { StatusConfig } from '~/types'
+import { downloadAllImages } from '~/utils/download'
 
 // Meta tags for SEO
 useHead({
@@ -48,6 +49,7 @@ watch(fileInputValue, (newFiles) => {
   if (newFiles && newFiles.length > 0) {
     console.log('[DEBUG] Adding files via watch')
     addFiles(newFiles)
+    fileInputValue.value = []
   }
 }, { deep: true })
 
@@ -135,6 +137,29 @@ const canProcess = computed(() => {
  */
 function toggleLogs(): void {
   showLogs.value = !showLogs.value
+}
+
+/**
+ * Download all processed images as ZIP
+ */
+async function handleDownloadAll(): Promise<void> {
+  try {
+    await downloadAllImages(files.value)
+    toast.add({
+      title: 'Download Started',
+      description: `Downloading ${completedFilesCount.value} processed image(s) as ZIP`,
+      icon: 'i-lucide-download',
+      color: 'success',
+    })
+  }
+  catch (error) {
+    toast.add({
+      title: 'Download Failed',
+      description: error instanceof Error ? error.message : 'Unknown error',
+      icon: 'i-lucide-alert-circle',
+      color: 'error',
+    })
+  }
 }
 
 /**
@@ -234,8 +259,10 @@ onUnmounted(() => {
             :is-processing="isProcessing"
             :show-logs="showLogs"
             :wasm-ready="wasmReady"
+            :completed-files-count="completedFilesCount"
             @process="handleProcess"
             @toggle-logs="toggleLogs"
+            @download-all="handleDownloadAll"
           />
 
           <!-- Processing Logs Section -->
