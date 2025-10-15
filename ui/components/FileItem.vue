@@ -99,9 +99,9 @@ const fileTypeDisplay = computed(() => {
 
 <template>
   <UCard :ui="{ body: 'p-4' }" class="file-item transition-all duration-200 hover:shadow-md">
-    <div class="flex items-center justify-between gap-4">
+    <div class="flex items-start justify-between gap-4">
       <!-- File Info Section -->
-      <div class="flex items-center gap-3 flex-1 min-w-0">
+      <div class="flex items-start gap-3 flex-1 min-w-0">
         <!-- File Icon -->
         <div
           class="flex-shrink-0 text-2xl transition-transform duration-200"
@@ -148,9 +148,9 @@ const fileTypeDisplay = computed(() => {
       </div>
 
       <!-- Actions Section -->
-      <div class="flex items-center gap-3 flex-shrink-0">
+      <div class="flex flex-col items-end gap-2 flex-shrink-0">
         <!-- Status Badge -->
-        <UBadge :color="statusConfig.color" variant="subtle" class="transition-all duration-200">
+        <UBadge :color="statusConfig.color" variant="subtle" class="transition-all duration-200 whitespace-nowrap">
           <UIcon :name="statusConfig.icon" class="mr-1" :class="{ 'animate-spin': isProcessing }" />
           {{ statusConfig.label }}
         </UBadge>
@@ -160,7 +160,7 @@ const fileTypeDisplay = computed(() => {
           icon="i-lucide-trash-2"
           color="neutral"
           variant="ghost"
-          size="sm"
+          size="xs"
           :disabled="isProcessing"
           aria-label="Remove file"
           @click="handleRemove"

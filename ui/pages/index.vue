@@ -98,28 +98,6 @@ async function handleProcess(): Promise<void> {
   })
 }
 
-/**
- * Download all processed images as ZIP
- */
-async function handleDownloadAll(): Promise<void> {
-  try {
-    await filesStore.downloadAll()
-    toast.add({
-      title: 'Download Started',
-      description: `Downloading ${filesStore.completedFilesCount} processed image(s) as ZIP`,
-      icon: 'i-lucide-download',
-      color: 'success',
-    })
-  }
-  catch (error) {
-    toast.add({
-      title: 'Download Failed',
-      description: error instanceof Error ? error.message : 'Unknown error',
-      icon: 'i-lucide-alert-circle',
-      color: 'error',
-    })
-  }
-}
 
 /**
  * Keyboard shortcuts
@@ -148,61 +126,61 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="page-container min-h-screen flex items-center justify-center p-4 sm:p-6">
-    <div class="w-full max-w-5xl">
-      <!-- Main Card -->
-      <UCard
-        class="main-card bg-white/95 dark:bg-gray-900/95 backdrop-blur shadow-2xl"
-        :ui="{
-          body: 'space-y-6 p-6 sm:p-8',
-          header: 'p-6 sm:p-8',
-        }"
-      >
-        <!-- Header -->
-        <template #header>
-          <PageHeader />
+  <div class="page-container h-screen flex flex-col overflow-hidden">
+    <!-- Header Section -->
+    <header class="page-header bg-white/95 dark:bg-gray-900/95 backdrop-blur border-b border-gray-200 dark:border-gray-800 px-6 py-4">
+      <PageHeader />
+    </header>
 
-          <!-- Stats Bar -->
-          <StatsBar />
-        </template>
-
-        <!-- Body -->
-        <div class="space-y-6">
+    <!-- Main Content Area -->
+    <main class="flex-1 overflow-hidden flex flex-col lg:flex-row gap-0">
+      <!-- Left Panel: Upload & Controls -->
+      <aside class="lg:w-96 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col">
+        <div class="flex-1 overflow-y-auto p-6 space-y-6">
           <!-- File Upload Section -->
           <FileUploadSection v-model="fileInputValue" />
 
           <!-- File List Section -->
           <FileListSection />
 
+          <!-- Actions Section -->
+          <ActionsBar @process="handleProcess" />
+        </div>
+      </aside>
+
+      <!-- Center Panel: Image Comparisons -->
+      <section class="flex-1 bg-gray-50 dark:bg-gray-950 overflow-y-auto">
+        <div class="h-full p-6">
           <!-- Image Comparisons Section -->
           <ComparisonSection />
-
-          <!-- Actions Section -->
-          <ActionsBar
-            @process="handleProcess"
-            @download-all="handleDownloadAll"
-          />
-
-          <!-- Processing Logs Section -->
-          <Transition
-            name="logs"
-            enter-active-class="transition duration-200 ease-out"
-            enter-from-class="opacity-0 transform translate-y-4"
-            enter-to-class="opacity-100 transform translate-y-0"
-            leave-active-class="transition duration-150 ease-in"
-            leave-from-class="opacity-100 transform translate-y-0"
-            leave-to-class="opacity-0 transform translate-y-4"
-          >
-            <section v-if="uiStore.showLogs" aria-labelledby="logs-heading">
-              <ProcessingLogs />
-            </section>
-          </Transition>
         </div>
-      </UCard>
+      </section>
 
-      <!-- Footer Info -->
+      <!-- Right Panel: Logs -->
+      <Transition
+        name="logs-panel"
+        enter-active-class="transition-transform duration-300 ease-out"
+        enter-from-class="translate-x-full"
+        enter-to-class="translate-x-0"
+        leave-active-class="transition-transform duration-300 ease-in"
+        leave-from-class="translate-x-0"
+        leave-to-class="translate-x-full"
+      >
+        <aside
+          v-if="uiStore.showLogs"
+          class="lg:w-96 bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-800 flex flex-col"
+        >
+          <div class="flex-1 overflow-y-auto p-6">
+            <ProcessingLogs />
+          </div>
+        </aside>
+      </Transition>
+    </main>
+
+    <!-- Footer -->
+    <footer class="page-footer bg-white/95 dark:bg-gray-900/95 backdrop-blur border-t border-gray-200 dark:border-gray-800">
       <PageFooter />
-    </div>
+    </footer>
   </div>
 </template>
 
@@ -227,41 +205,49 @@ onUnmounted(() => {
   }
 }
 
-.main-card {
-  animation: slideUp 0.5s ease-out;
-}
-
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* Dark mode adjustments */
-:deep(.dark) .main-card {
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-/* Transitions */
-.logs-enter-active,
-.logs-leave-active {
+/* Panel transitions */
+.logs-panel-enter-active,
+.logs-panel-leave-active {
   transition: all 0.3s ease;
 }
 
-.logs-enter-from {
+.logs-panel-enter-from {
   opacity: 0;
-  transform: translateY(-10px);
+  transform: translateX(100%);
 }
 
-.logs-leave-to {
+.logs-panel-leave-to {
   opacity: 0;
-  transform: translateY(-10px);
+  transform: translateX(100%);
+}
+
+/* Scrollbar styling for panels */
+aside::-webkit-scrollbar,
+section::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+aside::-webkit-scrollbar-track,
+section::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+aside::-webkit-scrollbar-thumb,
+section::-webkit-scrollbar-thumb {
+  background-color: rgba(156, 163, 175, 0.3);
+  border-radius: 4px;
+}
+
+aside::-webkit-scrollbar-thumb:hover,
+section::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(156, 163, 175, 0.5);
+}
+
+/* Dark mode panel borders */
+:deep(.dark) aside,
+:deep(.dark) section {
+  scrollbar-color: rgba(156, 163, 175, 0.3) transparent;
 }
 
 /* Accessibility */
@@ -275,10 +261,20 @@ onUnmounted(() => {
   }
 }
 
-/* Responsive adjustments */
-@media (max-width: 640px) {
-  .page-container {
-    padding: 1rem;
+/* Responsive: Stack panels on mobile */
+@media (max-width: 1024px) {
+  main {
+    flex-direction: column;
+  }
+
+  aside {
+    width: 100% !important;
+    max-height: 40vh;
+  }
+
+  .logs-panel-enter-from,
+  .logs-panel-leave-to {
+    transform: translateY(100%);
   }
 }
 </style>

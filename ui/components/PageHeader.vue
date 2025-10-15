@@ -1,5 +1,9 @@
 <script setup lang="ts">
 const wasmStore = useWasmStore()
+const uiStore = useUiStore()
+const logsStore = useLogsStore()
+
+const logCount = computed(() => logsStore.logs.length)
 </script>
 
 <template>
@@ -22,20 +26,39 @@ const wasmStore = useWasmStore()
       </div>
     </div>
 
-    <!-- Status Badge -->
-    <UBadge
-      :color="(wasmStore.statusBadge.color as any)"
-      size="lg"
-      variant="subtle"
-      class="status-badge flex-shrink-0"
-    >
-      <UIcon
-        :name="wasmStore.statusBadge.icon"
-        class="mr-2"
-        :class="{ 'animate-spin': !wasmStore.wasmReady && !wasmStore.wasmError }"
-      />
-      {{ wasmStore.statusBadge.label }}
-    </UBadge>
+    <!-- Right side: Status Badge & Logs Toggle -->
+    <div class="flex items-center gap-3 flex-shrink-0">
+      <!-- Status Badge -->
+      <UBadge
+        :color="(wasmStore.statusBadge.color as any)"
+        size="lg"
+        variant="subtle"
+        class="status-badge"
+      >
+        <UIcon
+          :name="wasmStore.statusBadge.icon"
+          class="mr-2"
+          :class="{ 'animate-spin': !wasmStore.wasmReady && !wasmStore.wasmError }"
+        />
+        {{ wasmStore.statusBadge.label }}
+      </UBadge>
+
+      <!-- Logs Toggle Button -->
+      <UButton
+        :icon="uiStore.showLogs ? 'i-lucide-panel-right-close' : 'i-lucide-panel-right-open'"
+        :label="uiStore.showLogs ? 'Hide Logs' : 'Show Logs'"
+        color="neutral"
+        variant="outline"
+        size="md"
+        @click="uiStore.toggleLogs"
+      >
+        <template v-if="logCount > 0" #trailing>
+          <UBadge color="primary" size="xs">
+            {{ logCount }}
+          </UBadge>
+        </template>
+      </UButton>
+    </div>
   </div>
 </template>
 

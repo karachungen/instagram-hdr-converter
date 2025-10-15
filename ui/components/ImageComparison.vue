@@ -181,7 +181,15 @@ function handleDownload(): void {
 
   display: block;
   width: 100%;
+  min-height: 500px;
+  max-height: 80vh;
   aspect-ratio: auto;
+}
+
+@media (min-width: 1920px) {
+  .comparison-slider {
+    min-height: 700px;
+  }
 }
 
 .comparison-image {
