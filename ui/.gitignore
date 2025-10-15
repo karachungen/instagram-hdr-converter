@@ -1,0 +1,26 @@
+# libultrahdr source
+libultrahdr/
+
+# Build directories
+build/
+wasm-output/
+
+# WASM output files
+*.wasm
+*.js
+!app.js
+
+# Keep favicon
+!favicon.svg
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+

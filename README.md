@@ -59,6 +59,24 @@ docker run --rm -v $(pwd):/data hdr-iso-converter photo.jpg
 docker run --rm -v $(pwd):/data hdr-iso-converter -q 98 photo.jpg instagram.jpg
 ```
 
+## Web UI (WASM)
+
+Want to test libultrahdr in your browser? Check out the **[ui/](ui/)** folder!
+
+The UI folder contains a WebAssembly build of libultrahdr with a simple web interface for testing HDR image processing directly in your browser.
+
+**Quick Start:**
+```bash
+cd ui
+./build-wasm-docker.sh
+python3 -m http.server 8000
+# Open http://localhost:8000/index.html
+```
+
+See [ui/QUICKSTART.md](ui/QUICKSTART.md) for details.
+
+---
+
 ## Other Tools
 
 
