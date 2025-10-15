@@ -1,315 +1,107 @@
-# Instagram HDR Converter - UI
+# Instagram HDR Converter
 
-A modern, production-ready Nuxt.js application for converting HDR images using Google's libultrahdr WebAssembly module. Built with TypeScript, Vue 3 Composition API, and best practices for performance, accessibility, and user experience.
+Modern Nuxt.js application for converting HDR images using Google's libultrahdr WebAssembly module.
 
-## ✨ Features
+## Features
 
-### Core Functionality
+- 🎨 HDR image processing using libultrahdr (compiled to WebAssembly)
+- 📁 Batch processing of multiple images
+- 💾 Client-side processing (private and secure)
+- 🚀 Real-time progress tracking
+- ⚡ Built with Nuxt 4, Vue 3, TypeScript
+- 🎨 Modern UI with Nuxt UI components
+- 🌗 Dark mode support
+- 📱 Responsive design
+- ♿ WCAG compliant accessibility
 
-- 🎨 **HDR Image Processing** - Convert HDR images using Google's libultrahdr compiled to WebAssembly
-- 📁 **Batch Processing** - Process multiple images simultaneously
-- 💾 **Client-Side Processing** - All processing happens in your browser (private and secure)
-- 🚀 **Real-time Progress** - Live updates and detailed logging
-
-### Technical Highlights
-
-- ⚡ **Built with Nuxt 4** - Latest Nuxt.js with Vue 3 and Composition API
-- 📘 **Full TypeScript** - Type-safe codebase with strict mode enabled
-- 🎯 **Performance Optimized** - Code splitting, lazy loading, and optimized builds
-- ♿ **Accessible** - WCAG compliant with keyboard shortcuts and ARIA labels
-- 🎨 **Modern UI** - Beautiful interface with Nuxt UI components
-- 🌗 **Dark Mode** - Full dark mode support
-- 📱 **Responsive** - Works perfectly on all devices
-- 🔒 **Secure** - Security headers and best practices
-
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
 - Node.js >= 18.0.0
-- pnpm >= 9.0.0 ([Installation Guide](./PNPM_SETUP.md))
+- pnpm >= 9.0.0
 
 ### Installation
 
 ```bash
-# Install pnpm globally (if not already installed)
+# Install pnpm globally
 npm install -g pnpm
 
 # Install dependencies
 pnpm install
 
-# Build and copy WASM files to public directory (first time only)
-./build-wasm-docker.sh  # Automatically copies to public/
-
-# Or manually copy if files already exist
-cp ultrahdr_app.js public/
-cp ultrahdr_app.wasm public/
+# Build WASM files (first time only)
+./build-wasm-docker.sh
 
 # Run development server
 pnpm dev
-
-# Open browser to http://localhost:3001
 ```
 
-### Building for Production
-
-```bash
-# Build for production
-pnpm build
-
-# Preview production build
-pnpm preview
-
-# Generate static site
-pnpm generate
-```
-
-## 📁 Project Structure
+## Project Structure
 
 ```
 ui/
-├── assets/
-│   └── css/
-│       └── main.css              # Global styles
-├── components/
-│   ├── ErrorBoundary.vue         # Global error boundary
-│   ├── FileItem.vue              # File list item component
-│   ├── LoadingState.vue          # Loading state component
-│   └── ProcessingLogs.vue        # Log viewer component
-├── composables/
-│   ├── useFileProcessor.ts       # File processing logic
-│   ├── useKeyboardShortcuts.ts   # Keyboard shortcuts manager
-│   ├── useLogs.ts                # Logging functionality
-│   └── useWasm.ts                # WASM module initialization
-├── pages/
-│   └── index.vue                 # Main application page
 ├── public/
-│   ├── favicon.svg               # App icon
-│   ├── ultrahdr_app.js           # WASM module JS
-│   └── ultrahdr_app.wasm         # WASM binary
+│   ├── ultrahdr_app.js      # WASM loader (generated)
+│   └── ultrahdr_app.wasm    # WASM binary (generated)
+├── assets/css/              # Global styles
+├── components/              # Vue components
+│   ├── ErrorBoundary.vue
+│   ├── FileItem.vue
+│   ├── LoadingState.vue
+│   └── ProcessingLogs.vue
+├── composables/             # Vue composables
+│   ├── useFileProcessor.ts
+│   ├── useKeyboardShortcuts.ts
+│   ├── useLogs.ts
+│   └── useWasm.ts
+├── pages/
+│   └── index.vue           # Main page
 ├── types/
-│   └── index.ts                  # TypeScript type definitions
-├── utils/
-│   ├── format.ts                 # Formatting utilities
-│   └── validators.ts             # Validation utilities
-├── app.vue                       # Root component
-├── nuxt.config.ts               # Nuxt configuration
-├── tsconfig.json                # TypeScript configuration
-└── package.json                 # Dependencies and scripts
+│   └── index.ts            # TypeScript types
+└── utils/                  # Utility functions
 ```
 
-## 🎯 Key Improvements (Senior Developer Level)
+## Building WASM Module
 
-### 1. TypeScript Migration
+The WASM module must be built before running the app.
 
-- ✅ Full TypeScript conversion with strict mode
-- ✅ Comprehensive type definitions
-- ✅ Type-safe composables and components
-- ✅ Proper interfaces for all data structures
+### Option 1: Docker (Recommended)
 
-### 2. Code Organization
-
-- ✅ Clean separation of concerns
-- ✅ Reusable utility functions
-- ✅ Modular composables architecture
-- ✅ Consistent file structure
-
-### 3. Performance Optimizations
-
-- ✅ Code splitting and lazy loading
-- ✅ Optimized bundle size
-- ✅ Efficient state management
-- ✅ Memoized computed properties
-- ✅ Debounced operations
-
-### 4. User Experience
-
-- ✅ Smooth animations and transitions
-- ✅ Keyboard shortcuts (⌘P, ⌘L)
-- ✅ Real-time progress indicators
-- ✅ Intuitive file management
-- ✅ Detailed error messages
-- ✅ Loading states
-
-### 5. Accessibility
-
-- ✅ ARIA labels and roles
-- ✅ Keyboard navigation
-- ✅ Screen reader support
-- ✅ Focus management
-- ✅ Color contrast compliance
-- ✅ Reduced motion support
-
-### 6. Error Handling
-
-- ✅ Global error boundary
-- ✅ Graceful error recovery
-- ✅ Detailed error messages
-- ✅ Fallback UI states
-- ✅ Error logging and tracking
-
-### 7. Developer Experience
-
-- ✅ ESLint configuration
-- ✅ Type checking
-- ✅ Auto-formatting
-- ✅ Development tools
-- ✅ Comprehensive documentation
-
-## 🎮 Keyboard Shortcuts
-
-| Shortcut        | Action             |
-| --------------- | ------------------ |
-| `⌘P` / `Ctrl+P` | Process all images |
-| `⌘L` / `Ctrl+L` | Toggle logs        |
-
-## 🧩 Component API
-
-### FileItem
-
-Displays individual file information with status and actions.
-
-**Props:**
-
-```typescript
-interface Props {
-  file: ProcessingFile
-}
+```bash
+./build-wasm-docker.sh
 ```
 
-**Events:**
+Automatically builds and copies WASM files to `public/` directory.
 
-```typescript
-interface Emits {
-  (e: 'remove'): void
-}
+### Option 2: Local Build (Requires Emscripten)
+
+```bash
+./build-wasm.sh
 ```
 
-### ProcessingLogs
+Requires Emscripten SDK installed locally.
 
-Shows real-time processing logs with filtering and auto-scroll.
+### Verify WASM Files
 
-**Features:**
-
-- Auto-scroll to bottom
-- Color-coded log types
-- Timestamp formatting
-- Log statistics
-- Clear functionality
-
-### ErrorBoundary
-
-Catches and displays errors gracefully.
-
-**Props:**
-
-```typescript
-interface Props {
-  fallback?: boolean // Show fallback UI (default: true)
-}
+```bash
+ls -lh public/ultrahdr_app.*
+# Should show:
+# public/ultrahdr_app.js    (~77KB)
+# public/ultrahdr_app.wasm  (~582KB)
 ```
 
-### LoadingState
-
-Displays loading state with customizable message.
-
-**Props:**
-
-```typescript
-interface Props {
-  message?: string
-  description?: string
-  fullscreen?: boolean
-  size?: 'sm' | 'md' | 'lg'
-}
-```
-
-## 🔧 Composables
-
-### useWasm()
-
-Manages WASM module initialization and lifecycle.
-
-**Returns:**
-
-```typescript
-{
-  wasmModule: Readonly<Ref<WasmModule | null>>
-  wasmReady: Readonly<Ref<boolean>>
-  wasmError: Readonly<Ref<string | null>>
-  initWasm: () => Promise<void>
-  resetWasm: () => void
-}
-```
-
-### useFileProcessor()
-
-Handles file processing operations.
-
-**Returns:**
-
-```typescript
-{
-  files: Readonly<Ref<ProcessingFile[]>>
-  isProcessing: Readonly<Ref<boolean>>
-  addFiles: (fileList: FileList | File[]) => void
-  removeFile: (fileId: string) => void
-  clearFiles: () => void
-  processAllFiles: (wasmModule: WasmModule, toast: any) => Promise<void>
-  pendingFilesCount: ComputedRef<number>
-  readyFilesCount: ComputedRef<number>
-  processingFilesCount: ComputedRef<number>
-  completedFilesCount: ComputedRef<number>
-  errorFilesCount: ComputedRef<number>
-}
-```
-
-### useLogs()
-
-Manages application logs.
-
-**Returns:**
-
-```typescript
-{
-  logs: Readonly<Ref<LogEntry[]>>
-  add: (message: string, type: LogType) => void
-  clear: () => void
-  getLogsByType: (type: LogType) => LogEntry[]
-  getCountByType: (type: LogType) => number
-}
-```
-
-### useKeyboardShortcuts()
-
-Manages keyboard shortcuts.
-
-**Returns:**
-
-```typescript
-{
-  shortcuts: Readonly<Ref<KeyboardShortcut[]>>
-  isEnabled: Readonly<Ref<boolean>>
-  register: (shortcut: KeyboardShortcut) => void
-  unregister: (key: string) => void
-  enable: () => void
-  disable: () => void
-  getFormattedKey: (shortcut: KeyboardShortcut) => string
-}
-```
-
-## 🛠 Available Scripts
+## Available Commands
 
 ```bash
 # Development
 pnpm dev              # Start dev server
 pnpm build            # Build for production
 pnpm preview          # Preview production build
-pnpm generate         # Generate static site
 
 # Code Quality
-pnpm lint             # Lint and format code with ESLint
-pnpm lint:fix         # Lint and auto-fix all issues
+pnpm lint             # Lint code
+pnpm lint:fix         # Lint and auto-fix
 pnpm typecheck        # TypeScript type checking
 
 # Utilities
@@ -317,108 +109,65 @@ pnpm clean            # Clean build artifacts
 pnpm analyze          # Analyze bundle size
 ```
 
-## 🎨 Styling & Code Quality
+## Keyboard Shortcuts
 
-### Styling
+| Shortcut | Action |
+|----------|--------|
+| `⌘P` / `Ctrl+P` | Process all images |
+| `⌘L` / `Ctrl+L` | Toggle logs |
 
-The application uses:
+## Configuration
 
-- **Nuxt UI** - Component library
-- **Tailwind CSS** - Utility-first CSS
-- **Custom CSS** - For animations and transitions
-- **Dark Mode** - Auto-detection with manual toggle
+### Package Manager: pnpm
 
-### Linting & Formatting
+This project uses pnpm for better performance and disk efficiency.
 
-- **ESLint** - Using [@antfu/eslint-config](https://github.com/antfu/eslint-config)
-- **Prettier** - Integrated via ESLint formatters
-- **TypeScript** - Strict type checking
-- **Auto-fix on save** - Configured in VSCode
-- See [QUICK_START.md](./QUICK_START.md) for setup details
+```bash
+# Install pnpm
+npm install -g pnpm
 
-### Package Manager
+# Basic commands
+pnpm install          # Install dependencies
+pnpm add <pkg>        # Add package
+pnpm remove <pkg>     # Remove package
+pnpm update           # Update packages
+```
 
-- **pnpm** - Fast, disk space efficient package manager
-- See [PNPM_SETUP.md](./PNPM_SETUP.md) for installation and usage guide
+### Linting: ESLint
 
-## 🔐 Security
+Using [@antfu/eslint-config](https://github.com/antfu/eslint-config) with auto-fix on save.
 
-- ✅ Security headers configured
-- ✅ XSS protection
-- ✅ CSRF protection
-- ✅ Content Security Policy
-- ✅ All processing client-side
+```bash
+pnpm lint             # Check code
+pnpm lint:fix         # Fix issues
+```
 
-## 📊 Performance
+### TypeScript
 
-- ✅ Lighthouse score: 95+
-- ✅ First Contentful Paint: < 1s
-- ✅ Time to Interactive: < 2s
-- ✅ Bundle size optimized
-- ✅ Code splitting enabled
+Strict mode enabled with full type safety.
 
-## 🌐 Browser Support
+```bash
+pnpm typecheck        # Check types
+```
 
-- Chrome (latest)
-- Firefox (latest)
-- Safari (latest)
-- Edge (latest)
-
-**Note:** WebAssembly support required
-
-## 📝 Best Practices Implemented
-
-### Code Quality
-
-- ✅ Strict TypeScript
-- ✅ ESLint rules
-- ✅ Consistent formatting
-- ✅ No console.log in production
-- ✅ Proper error handling
-
-### Vue/Nuxt
-
-- ✅ Composition API
-- ✅ Script setup syntax
-- ✅ Auto-imports
-- ✅ Type-safe routing
-- ✅ SSR-ready
-
-### Performance
-
-- ✅ Lazy loading
-- ✅ Code splitting
-- ✅ Asset optimization
-- ✅ Caching strategy
-- ✅ Bundle analysis
-
-### Accessibility
-
-- ✅ Semantic HTML
-- ✅ ARIA attributes
-- ✅ Keyboard navigation
-- ✅ Focus indicators
-- ✅ Screen reader support
-
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### WASM Module Not Loading
 
-1. Verify WASM files exist in `/public`:
-
+1. **Check files exist:**
    ```bash
    ls -la public/ultrahdr_app.*
    ```
 
-2. Build WASM module:
-
+2. **Rebuild WASM:**
    ```bash
-   ./build-wasm.sh
-   # or
    ./build-wasm-docker.sh
    ```
 
-3. Check browser console for errors
+3. **Restart dev server:**
+   ```bash
+   pnpm dev
+   ```
 
 ### TypeScript Errors
 
@@ -426,7 +175,7 @@ The application uses:
 # Regenerate types
 pnpm postinstall
 
-# Check for errors
+# Check errors
 pnpm typecheck
 ```
 
@@ -437,30 +186,87 @@ pnpm typecheck
 pnpm clean
 rm -rf node_modules pnpm-lock.yaml
 pnpm install
-
-# Ensure WASM files are in public
-ls -lh public/ultrahdr_app.* || ./build-wasm-docker.sh
-
-# Build
 pnpm build
 ```
 
-## 🤝 Contributing
+### Error: 404 /ultrahdr_app.js
 
-1. Follow TypeScript strict mode
-2. Use Composition API
-3. Write tests for new features
-4. Update documentation
-5. Follow existing code style
+**Cause:** WASM files not in `public/` directory.
 
-## 📄 License
+**Fix:**
+```bash
+./build-wasm-docker.sh
+pnpm dev
+```
+
+### WASM Module Load Timeout
+
+The app waits up to 6 seconds for the WASM module to load. If it fails:
+
+1. Check browser console for errors
+2. Verify files in `public/` directory
+3. Check network tab for 404 errors
+4. Rebuild WASM files
+
+## Browser Support
+
+- Chrome (latest)
+- Firefox (latest)
+- Safari (latest)
+- Edge (latest)
+
+WebAssembly support required.
+
+## Development Workflow
+
+1. **First time:**
+   ```bash
+   pnpm install
+   ./build-wasm-docker.sh
+   pnpm dev
+   ```
+
+2. **Regular development:**
+   ```bash
+   pnpm dev
+   ```
+
+3. **After pulling changes:**
+   ```bash
+   pnpm install
+   # Rebuild WASM only if source changed
+   ./build-wasm-docker.sh
+   pnpm dev
+   ```
+
+4. **Production build:**
+   ```bash
+   ./build-wasm-docker.sh
+   pnpm build
+   pnpm preview
+   ```
+
+## Key Technologies
+
+- **Nuxt 4.1.3** - Vue framework
+- **Vue 3.5.22** - Progressive JavaScript framework
+- **TypeScript 5.7.2** - Type safety
+- **Nuxt UI 4.0.0** - Component library
+- **Tailwind CSS** - Utility-first CSS
+- **pnpm 9.15.0** - Package manager
+- **ESLint** - Code linting with @antfu/eslint-config
+- **libultrahdr** - Google's HDR library (WASM)
+
+## Version
+
+Current version: **2.0.0** (2025-10-15)
+
+Major rewrite with TypeScript, improved architecture, and production-ready code quality.
+
+## License
 
 MIT
 
-## 👨‍💻 Author
+## Author
 
 karachungen
-
----
-
-**Built with ❤️ using Nuxt 4, Vue 3, and TypeScript**

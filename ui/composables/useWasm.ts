@@ -109,6 +109,29 @@ export function useWasm(): UseWasmReturn {
   }
 
   /**
+   * Wait for UltraHDRModule to be available
+   * Note: UltraHDRModule is a global const, not explicitly on window object
+   */
+  const waitForUltraHDRModule = async (maxAttempts: number = 30): Promise<void> => {
+    addLog('Step 1: Waiting for ultrahdr_app.js to load...', 'info')
+
+    for (let i = 0; i < maxAttempts; i++) {
+      // Check both window.UltraHDRModule and global UltraHDRModule
+      if (typeof UltraHDRModule !== 'undefined' || typeof window.UltraHDRModule !== 'undefined') {
+        addLog(`✓ UltraHDRModule loaded after ${(i + 1) * 200}ms`, 'success')
+        return
+      }
+
+      if (i % 5 === 0 || i === maxAttempts - 1) {
+        addLog(`  Waiting for UltraHDRModule... ${i + 1} of ${maxAttempts}`, 'info')
+      }
+      await new Promise(resolve => setTimeout(resolve, 200))
+    }
+
+    throw new Error('UltraHDRModule not found. Please ensure ultrahdr_app.js is in public/ directory.')
+  }
+
+  /**
    * Initialize the WASM module
    */
   const initWasm = async (): Promise<void> => {
@@ -118,11 +141,8 @@ export function useWasm(): UseWasmReturn {
       addLog(`Timestamp: ${new Date().toISOString()}`, 'info')
       addLog(`Browser: ${navigator.userAgent}`, 'info')
 
-      // Step 1: Check if UltraHDRModule is loaded
-      addLog('Step 1: Checking for UltraHDRModule...', 'info')
-      if (typeof window.UltraHDRModule === 'undefined') {
-        throw new TypeError('UltraHDRModule not found! ultrahdr_app.js may not be loaded.')
-      }
+      // Step 1: Wait for UltraHDRModule to be loaded
+      await waitForUltraHDRModule()
       addLog(`✓ UltraHDRModule type: ${typeof window.UltraHDRModule}`, 'success')
 
       // Step 2: Check WASM file
@@ -155,8 +175,17 @@ export function useWasm(): UseWasmReturn {
       // Step 4: Initialize the module
       addLog('Step 4: Calling UltraHDRModule() [this may take a few seconds]...', 'info')
 
+      // Get UltraHDRModule from global scope (it's not on window object)
+      const moduleFactory = (typeof UltraHDRModule !== 'undefined')
+        ? UltraHDRModule
+        : window.UltraHDRModule
+
+      if (!moduleFactory) {
+        throw new Error('UltraHDRModule disappeared after successful wait!')
+      }
+
       const startTime = performance.now()
-      const module = await window.UltraHDRModule(moduleConfig)
+      const module = await moduleFactory(moduleConfig)
       const loadTime = ((performance.now() - startTime) / 1000).toFixed(2)
 
       addLog(`✓ UltraHDRModule loaded in ${loadTime}s!`, 'success')

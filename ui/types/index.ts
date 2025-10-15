@@ -53,8 +53,14 @@ export interface StatusConfig {
   label: string
 }
 
+// UltraHDRModule is defined globally by the WASM script, not on window
+declare const UltraHDRModule: ((config: WasmModuleConfig) => Promise<WasmModule>) | undefined
+
 declare global {
   interface Window {
     UltraHDRModule?: (config: WasmModuleConfig) => Promise<WasmModule>
   }
+
+  // Global variable (not on window)
+  const UltraHDRModule: ((config: WasmModuleConfig) => Promise<WasmModule>) | undefined
 }

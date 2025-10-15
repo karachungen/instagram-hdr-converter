@@ -71,9 +71,19 @@ watch(wasmError, (error) => {
 /**
  * Handle file selection
  */
-function handleFilesSelected(event: Event): void {
-  const input = event.target as HTMLInputElement
-  const selectedFiles = input.files
+function handleFilesSelected(filesOrEvent: File[] | Event): void {
+  let selectedFiles: FileList | File[] | null = null
+
+  // Check if it's an array of files (from UFileUpload drag-and-drop)
+  if (Array.isArray(filesOrEvent)) {
+    selectedFiles = filesOrEvent
+  }
+  // Check if it's an Event (from input change)
+  else if (filesOrEvent && 'target' in filesOrEvent) {
+    const input = (filesOrEvent as Event).target as HTMLInputElement | null
+    selectedFiles = input?.files || null
+  }
+
   if (selectedFiles && selectedFiles.length > 0) {
     addFiles(selectedFiles)
     fileInputValue.value = []
