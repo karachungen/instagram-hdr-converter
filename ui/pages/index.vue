@@ -98,7 +98,6 @@ async function handleProcess(): Promise<void> {
   })
 }
 
-
 /**
  * Keyboard shortcuts
  */
