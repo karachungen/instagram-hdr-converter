@@ -14,10 +14,10 @@ fi
 # Create build directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BUILD_DIR="${SCRIPT_DIR}/build"
-INSTALL_DIR="${SCRIPT_DIR}/wasm-output"
+PUBLIC_DIR="${SCRIPT_DIR}/public"
 
-rm -rf "${BUILD_DIR}" "${INSTALL_DIR}"
-mkdir -p "${BUILD_DIR}" "${INSTALL_DIR}"
+rm -rf "${BUILD_DIR}"
+mkdir -p "${BUILD_DIR}" "${PUBLIC_DIR}"
 
 # Clone libultrahdr if not exists
 if [ ! -d "${SCRIPT_DIR}/libultrahdr" ]; then
@@ -36,24 +36,47 @@ emcmake cmake ../libultrahdr \
     -DUHDR_BUILD_BENCHMARK=OFF \
     -DUHDR_BUILD_FUZZERS=OFF \
     -DUHDR_ENABLE_LOGS=ON \
-    -DUHDR_WRITE_XMP=ON \
-    -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}"
+    -DUHDR_WRITE_XMP=ON
 
 echo "🔨 Building..."
 emmake make -j$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
 
-echo "📦 Installing..."
-emmake make install
+echo "📦 Copying WASM files to public/..."
+# Try multiple possible locations
+COPIED=false
 
-# Copy outputs to ui directory
-cp "${BUILD_DIR}/ultrahdr_app.js" "${SCRIPT_DIR}/" 2>/dev/null || echo "⚠️  ultrahdr_app.js not found"
-cp "${BUILD_DIR}/ultrahdr_app.wasm" "${SCRIPT_DIR}/" 2>/dev/null || echo "⚠️  ultrahdr_app.wasm not found"
-cp "${BUILD_DIR}/examples/ultrahdr_app.js" "${SCRIPT_DIR}/" 2>/dev/null || echo "⚠️  ultrahdr_app.js not found in examples"
-cp "${BUILD_DIR}/examples/ultrahdr_app.wasm" "${SCRIPT_DIR}/" 2>/dev/null || echo "⚠️  ultrahdr_app.wasm not found in examples"
+if [ -f "${BUILD_DIR}/ultrahdr_app.js" ]; then
+    cp "${BUILD_DIR}/ultrahdr_app.js" "${PUBLIC_DIR}/"
+    cp "${BUILD_DIR}/ultrahdr_app.wasm" "${PUBLIC_DIR}/"
+    COPIED=true
+    echo "✅ Copied from build root"
+fi
 
-echo "✅ Build complete!"
-echo "📁 WASM files should be in: ${SCRIPT_DIR}/"
-echo ""
-echo "To test the UI, run: python3 -m http.server 8000"
-echo "Then open: http://localhost:8000/index.html"
+if [ -f "${BUILD_DIR}/examples/ultrahdr_app.js" ]; then
+    cp "${BUILD_DIR}/examples/ultrahdr_app.js" "${PUBLIC_DIR}/"
+    cp "${BUILD_DIR}/examples/ultrahdr_app.wasm" "${PUBLIC_DIR}/"
+    COPIED=true
+    echo "✅ Copied from examples/"
+fi
+
+if [ "$COPIED" = false ]; then
+    echo "⚠️  WASM files not found. Searching..."
+    find "${BUILD_DIR}" -name "ultrahdr_app.*" -exec ls -la {} \;
+    exit 1
+fi
+
+# Verify files exist
+if [ -f "${PUBLIC_DIR}/ultrahdr_app.js" ] && [ -f "${PUBLIC_DIR}/ultrahdr_app.wasm" ]; then
+    echo ""
+    echo "✅ Build complete!"
+    echo "📁 WASM files copied to: ${PUBLIC_DIR}/"
+    ls -lh "${PUBLIC_DIR}/ultrahdr_app."*
+    echo ""
+    echo "🚀 To run the UI:"
+    echo "   pnpm dev"
+    echo "   Open: http://localhost:3001"
+else
+    echo "❌ Error: WASM files were not created successfully"
+    exit 1
+fi
 

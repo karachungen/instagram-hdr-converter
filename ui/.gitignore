@@ -1,26 +1,53 @@
-# libultrahdr source
-libultrahdr/
+# Nuxt
+.nuxt
+.output
+.env
+.env.*
+!.env.example
 
-# Build directories
-build/
-wasm-output/
+# Node
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
 
-# WASM output files
-*.wasm
-*.js
-!app.js
+# pnpm
+.pnpm-debug.log*
 
-# Keep favicon
-!favicon.svg
+# WASM files (generated)
+ultrahdr_app.js
+ultrahdr_app.wasm
+wasm-files/
+public/ultrahdr_app.js
+public/ultrahdr_app.wasm
 
-# Editor
-.vscode/
-.idea/
+# IDE
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+.idea
 *.swp
 *.swo
 *~
-
-# OS
 .DS_Store
-Thumbs.db
 
+# Build
+dist
+.cache
+.temp
+
+# Testing
+coverage
+.nyc_output
+
+# Logs
+logs
+*.log
+
+# Misc
+.turbo
+.netlify
+.vercel
+.cloudflare

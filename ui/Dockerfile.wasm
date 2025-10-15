@@ -1,0 +1,36 @@
+FROM emscripten/emsdk:latest
+
+WORKDIR /build
+
+# Install dependencies
+RUN apt-get update && apt-get install -y \
+    git \
+    cmake \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Clone libultrahdr
+RUN git clone https://github.com/google/libultrahdr.git
+
+# Build with WASM
+WORKDIR /build/libultrahdr/build
+RUN emcmake cmake .. \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DUHDR_BUILD_EXAMPLES=ON \
+    -DUHDR_BUILD_TESTS=OFF \
+    -DUHDR_BUILD_BENCHMARK=OFF \
+    -DUHDR_BUILD_FUZZERS=OFF \
+    -DUHDR_ENABLE_LOGS=ON \
+    -DUHDR_WRITE_XMP=ON \
+    -DCMAKE_CXX_FLAGS="-s EXPORTED_FUNCTIONS='[_main]' -s EXPORTED_RUNTIME_METHODS='[FS,callMain]' -s ALLOW_MEMORY_GROWTH=1 -s MODULARIZE=1 -s EXPORT_NAME='UltraHDRModule'"
+
+RUN emmake make -j$(nproc)
+
+# Copy outputs
+RUN mkdir -p /output
+RUN find . -name "*.wasm" -exec cp {} /output/ \; || true
+RUN find . -name "*.js" -exec cp {} /output/ \; || true
+RUN ls -la /output/
+
+CMD ["bash"]
+
