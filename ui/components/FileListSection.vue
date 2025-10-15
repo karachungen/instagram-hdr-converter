@@ -1,31 +1,18 @@
 <script setup lang="ts">
-import type { ProcessingFile } from '~/types'
-
-interface Props {
-  files: ProcessingFile[]
-  isProcessing: boolean
-}
-
-interface Emits {
-  (e: 'remove', fileId: string): void
-  (e: 'clearAll'): void
-}
-
-defineProps<Props>()
-const emit = defineEmits<Emits>()
+const filesStore = useFilesStore()
 
 function handleRemove(fileId: string): void {
-  emit('remove', fileId)
+  filesStore.removeFile(fileId)
 }
 
 function handleClearAll(): void {
-  emit('clearAll')
+  filesStore.clearFiles()
 }
 </script>
 
 <template>
   <section
-    v-if="files.length > 0"
+    v-if="filesStore.files.length > 0"
     aria-labelledby="files-heading"
     class="file-list-section"
   >
@@ -34,7 +21,7 @@ function handleClearAll(): void {
         <UIcon name="i-lucide-files" class="mr-2" />
         Files
         <span class="ml-2 text-sm text-gray-500 dark:text-gray-400">
-          ({{ files.length }})
+          ({{ filesStore.files.length }})
         </span>
       </h2>
 
@@ -44,7 +31,7 @@ function handleClearAll(): void {
         color="neutral"
         variant="outline"
         size="xs"
-        :disabled="isProcessing"
+        :disabled="filesStore.isProcessing"
         aria-label="Clear all files"
         @click="handleClearAll"
       />
@@ -53,7 +40,7 @@ function handleClearAll(): void {
     <!-- File List -->
     <div class="space-y-2 max-h-[400px] overflow-y-auto pr-2" role="list">
       <FileItem
-        v-for="file in files"
+        v-for="file in filesStore.files"
         :key="file.id"
         :file="file"
         role="listitem"

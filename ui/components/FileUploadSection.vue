@@ -1,11 +1,5 @@
 <script setup lang="ts">
-interface Props {
-  isInitializing: boolean
-  wasmError: string | null
-}
-
-defineProps<Props>()
-
+const wasmStore = useWasmStore()
 const fileInputValue = defineModel<File[]>({ default: [] })
 </script>
 
@@ -24,7 +18,7 @@ const fileInputValue = defineModel<File[]>({ default: [] })
       multiple
       accept="image/*"
       layout="grid"
-      :disabled="isInitializing || !!wasmError"
+      :disabled="wasmStore.isInitializing || !!wasmStore.wasmError"
     />
   </section>
 </template>

@@ -3,8 +3,8 @@
  * Helper functions for downloading processed images
  */
 
-import JSZip from 'jszip'
 import type { ProcessingFile } from '~/types'
+import JSZip from 'jszip'
 
 /**
  * Download a single image from data URL
@@ -23,9 +23,15 @@ export function downloadImage(dataUrl: string, filename: string): void {
  */
 function dataUrlToBlob(dataUrl: string): Blob {
   const arr = dataUrl.split(',')
-  const mimeMatch = arr[0].match(/:(.*?);/)
+  const mimeMatch = arr[0]?.match(/:(.*?);/)
   const mime = mimeMatch ? mimeMatch[1] : 'image/jpeg'
-  const bstr = atob(arr[1])
+  const base64 = arr[1]
+
+  if (!base64) {
+    throw new Error('Invalid data URL')
+  }
+
+  const bstr = atob(base64)
   let n = bstr.length
   const u8arr = new Uint8Array(n)
   while (n--) {
@@ -68,4 +74,3 @@ export async function downloadAllImages(files: ProcessingFile[]): Promise<void> 
   document.body.removeChild(link)
   URL.revokeObjectURL(url)
 }
-

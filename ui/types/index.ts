@@ -77,9 +77,6 @@ export interface StatusConfig {
 }
 
 declare global {
-  interface Window {
-    UltraHDRModule?: (config: WasmModuleConfig) => Promise<WasmModule>
-  }
 
   // Global variable (not on window)
 

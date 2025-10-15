@@ -1,7 +1,4 @@
 <script setup lang="ts">
-import type { StatusConfig } from '~/types'
-import { downloadAllImages } from '~/utils/download'
-
 // Meta tags for SEO
 useHead({
   title: 'Instagram HDR Converter - libultrahdr WASM',
@@ -14,41 +11,37 @@ useHead({
   ],
 })
 
+// Stores
 const toast = useToast()
-const { initWasm, wasmModule, wasmReady, wasmError } = useWasm()
-const {
-  files,
-  addFiles,
-  removeFile,
-  clearFiles,
-  processAllFiles,
-  isProcessing,
-  readyFilesCount,
-  completedFilesCount,
-  errorFilesCount,
-} = useFileProcessor()
+const wasmStore = useWasmStore()
+const filesStore = useFilesStore()
+const uiStore = useUiStore()
 
 const fileInputValue = ref<File[]>([])
-const showLogs = ref(true)
-const isInitializing = ref(false)
 
 /**
  * Initialize WASM on mount
  */
 onMounted(async () => {
-  isInitializing.value = true
-  await initWasm()
-  isInitializing.value = false
+  // Wait a tick to ensure DOM and scripts are ready
+  await nextTick()
+
+  // If document is still loading, wait for it
+  if (document.readyState === 'loading') {
+    await new Promise<void>((resolve) => {
+      document.addEventListener('DOMContentLoaded', () => resolve(), { once: true })
+    })
+  }
+
+  await wasmStore.initWasm()
 })
 
 /**
  * Watch fileInputValue and automatically add files
  */
 watch(fileInputValue, (newFiles) => {
-  console.log('[DEBUG] fileInputValue changed:', newFiles.length, 'files')
   if (newFiles && newFiles.length > 0) {
-    console.log('[DEBUG] Adding files via watch')
-    addFiles(newFiles)
+    filesStore.addFiles(newFiles)
     fileInputValue.value = []
   }
 }, { deep: true })
@@ -56,7 +49,7 @@ watch(fileInputValue, (newFiles) => {
 /**
  * Watch for WASM readiness
  */
-watch(wasmReady, (ready) => {
+watch(() => wasmStore.wasmReady, (ready) => {
   if (ready) {
     toast.add({
       title: 'WASM Module Ready',
@@ -70,7 +63,7 @@ watch(wasmReady, (ready) => {
 /**
  * Watch for WASM errors
  */
-watch(wasmError, (error) => {
+watch(() => wasmStore.wasmError, (error) => {
   if (error) {
     toast.add({
       title: 'WASM Module Error',
@@ -85,7 +78,7 @@ watch(wasmError, (error) => {
  * Process files
  */
 async function handleProcess(): Promise<void> {
-  if (!wasmModule.value) {
+  if (!wasmStore.wasmModule) {
     toast.add({
       title: 'WASM Not Ready',
       description: 'Please wait for WASM module to initialize',
@@ -95,48 +88,14 @@ async function handleProcess(): Promise<void> {
     return
   }
 
-  await processAllFiles(wasmModule.value, toast)
-}
+  const result = await filesStore.processAllFiles()
 
-/**
- * Status badge configuration
- */
-const statusBadge = computed<StatusConfig>(() => {
-  if (wasmError.value) {
-    return {
-      label: 'Error',
-      color: 'error',
-      icon: 'i-lucide-x-circle',
-    }
-  }
-
-  if (!wasmReady.value) {
-    return {
-      label: 'Loading...',
-      color: 'warning',
-      icon: 'i-lucide-loader-2',
-    }
-  }
-
-  return {
-    label: 'Ready',
-    color: 'success',
+  toast.add({
+    title: 'Processing Complete',
+    description: `${result.successCount} files processed successfully${result.errorCount > 0 ? `, ${result.errorCount} errors` : ''}`,
     icon: 'i-lucide-check-circle',
-  }
-})
-
-/**
- * Check if ready to process
- */
-const canProcess = computed(() => {
-  return files.value.length > 0 && wasmReady.value && !isProcessing.value
-})
-
-/**
- * Toggle logs visibility
- */
-function toggleLogs(): void {
-  showLogs.value = !showLogs.value
+    color: result.errorCount > 0 ? 'warning' : 'success',
+  })
 }
 
 /**
@@ -144,10 +103,10 @@ function toggleLogs(): void {
  */
 async function handleDownloadAll(): Promise<void> {
   try {
-    await downloadAllImages(files.value)
+    await filesStore.downloadAll()
     toast.add({
       title: 'Download Started',
-      description: `Downloading ${completedFilesCount.value} processed image(s) as ZIP`,
+      description: `Downloading ${filesStore.completedFilesCount} processed image(s) as ZIP`,
       icon: 'i-lucide-download',
       color: 'success',
     })
@@ -163,33 +122,11 @@ async function handleDownloadAll(): Promise<void> {
 }
 
 /**
- * File statistics
- */
-const fileStats = computed(() => ({
-  total: files.value.length,
-  ready: readyFilesCount.value,
-  completed: completedFilesCount.value,
-  errors: errorFilesCount.value,
-}))
-
-/**
- * Get completed files with results for comparison
- */
-const completedFilesWithResults = computed(() => {
-  return files.value.filter(f => f.status === 'completed' && f.result)
-})
-
-/**
- * Show file stats badge
- */
-const showFileStats = computed(() => fileStats.value.total > 0)
-
-/**
  * Keyboard shortcuts
  */
 function handleKeyPress(event: KeyboardEvent): void {
   // Cmd/Ctrl + P to process
-  if ((event.metaKey || event.ctrlKey) && event.key === 'p' && canProcess.value) {
+  if ((event.metaKey || event.ctrlKey) && event.key === 'p' && filesStore.canProcess) {
     event.preventDefault()
     handleProcess()
   }
@@ -197,7 +134,7 @@ function handleKeyPress(event: KeyboardEvent): void {
   // Cmd/Ctrl + L to toggle logs
   if ((event.metaKey || event.ctrlKey) && event.key === 'l') {
     event.preventDefault()
-    toggleLogs()
+    uiStore.toggleLogs()
   }
 }
 
@@ -223,45 +160,26 @@ onUnmounted(() => {
       >
         <!-- Header -->
         <template #header>
-          <PageHeader
-            :status-badge="statusBadge"
-            :wasm-ready="wasmReady"
-            :wasm-error="wasmError"
-          />
+          <PageHeader />
 
           <!-- Stats Bar -->
-          <StatsBar :stats="fileStats" :show="showFileStats" />
+          <StatsBar />
         </template>
 
         <!-- Body -->
         <div class="space-y-6">
           <!-- File Upload Section -->
-          <FileUploadSection
-            v-model="fileInputValue"
-            :is-initializing="isInitializing"
-            :wasm-error="wasmError"
-          />
+          <FileUploadSection v-model="fileInputValue" />
 
           <!-- File List Section -->
-          <FileListSection
-            :files="files"
-            :is-processing="isProcessing"
-            @remove="removeFile"
-            @clear-all="clearFiles"
-          />
+          <FileListSection />
 
           <!-- Image Comparisons Section -->
-          <ComparisonSection :completed-files="completedFilesWithResults" />
+          <ComparisonSection />
 
           <!-- Actions Section -->
           <ActionsBar
-            :can-process="canProcess"
-            :is-processing="isProcessing"
-            :show-logs="showLogs"
-            :wasm-ready="wasmReady"
-            :completed-files-count="completedFilesCount"
             @process="handleProcess"
-            @toggle-logs="toggleLogs"
             @download-all="handleDownloadAll"
           />
 
@@ -275,7 +193,7 @@ onUnmounted(() => {
             leave-from-class="opacity-100 transform translate-y-0"
             leave-to-class="opacity-0 transform translate-y-4"
           >
-            <section v-if="showLogs" aria-labelledby="logs-heading">
+            <section v-if="uiStore.showLogs" aria-labelledby="logs-heading">
               <ProcessingLogs />
             </section>
           </Transition>

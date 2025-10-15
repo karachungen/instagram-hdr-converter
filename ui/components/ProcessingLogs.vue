@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import type { LogType } from '~/types'
 
-const { logs, clear } = useLogs()
+const logsStore = useLogsStore()
 const logsContainer = ref<HTMLDivElement | null>(null)
 
 /**
  * Auto-scroll to bottom when new logs are added
  */
 watch(
-  () => logs.value.length,
+  () => logsStore.logs.length,
   () => {
     nextTick(() => {
       if (logsContainer.value) {
@@ -61,7 +61,7 @@ function formatTime(date: Date): string {
  * Handle clear logs
  */
 function handleClear(): void {
-  clear()
+  logsStore.clear()
 }
 
 /**
@@ -92,21 +92,21 @@ function scrollToBottom(): void {
 /**
  * Has logs
  */
-const hasLogs = computed(() => logs.value.length > 0)
+const hasLogs = computed(() => logsStore.logs.length > 0)
 
 /**
  * Log stats
  */
 const logStats = computed(() => {
   const stats = {
-    total: logs.value.length,
+    total: logsStore.logs.length,
     info: 0,
     success: 0,
     error: 0,
     warning: 0,
   }
 
-  logs.value.forEach((log: any) => {
+  logsStore.logs.forEach((log: any) => {
     if (log.type in stats) {
       stats[log.type as keyof typeof stats]++
     }
@@ -179,7 +179,7 @@ const logStats = computed(() => {
 
       <!-- Log Entries -->
       <div
-        v-for="log in logs"
+        v-for="log in logsStore.logs"
         :key="log.id"
         class="log-entry mb-1 flex items-start gap-2 transition-opacity duration-200"
         :class="getLogColor(log.type)"

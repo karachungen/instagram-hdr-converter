@@ -1,24 +1,12 @@
 <script setup lang="ts">
-interface FileStats {
-  total: number
-  ready: number
-  completed: number
-  errors: number
-}
-
-interface Props {
-  stats: FileStats
-  show: boolean
-}
-
-defineProps<Props>()
+const filesStore = useFilesStore()
 </script>
 
 <template>
-  <div v-if="show" class="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-3">
+  <div v-if="filesStore.fileStats.total > 0" class="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-3">
     <div class="stat-card bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
       <div class="text-2xl font-bold text-gray-900 dark:text-white">
-        {{ stats.total }}
+        {{ filesStore.fileStats.total }}
       </div>
       <div class="text-xs text-gray-600 dark:text-gray-400 uppercase tracking-wide">
         Total Files
@@ -27,7 +15,7 @@ defineProps<Props>()
 
     <div class="stat-card bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3">
       <div class="text-2xl font-bold text-blue-600 dark:text-blue-400">
-        {{ stats.ready }}
+        {{ filesStore.fileStats.ready }}
       </div>
       <div class="text-xs text-blue-600 dark:text-blue-400 uppercase tracking-wide">
         Ready
@@ -36,7 +24,7 @@ defineProps<Props>()
 
     <div class="stat-card bg-green-50 dark:bg-green-900/20 rounded-lg p-3">
       <div class="text-2xl font-bold text-green-600 dark:text-green-400">
-        {{ stats.completed }}
+        {{ filesStore.fileStats.completed }}
       </div>
       <div class="text-xs text-green-600 dark:text-green-400 uppercase tracking-wide">
         Completed
@@ -44,11 +32,11 @@ defineProps<Props>()
     </div>
 
     <div
-      v-if="stats.errors > 0"
+      v-if="filesStore.fileStats.errors > 0"
       class="stat-card bg-red-50 dark:bg-red-900/20 rounded-lg p-3"
     >
       <div class="text-2xl font-bold text-red-600 dark:text-red-400">
-        {{ stats.errors }}
+        {{ filesStore.fileStats.errors }}
       </div>
       <div class="text-xs text-red-600 dark:text-red-400 uppercase tracking-wide">
         Errors

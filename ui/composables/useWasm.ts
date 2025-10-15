@@ -182,7 +182,7 @@ export function useWasm(): UseWasmReturn {
       // Get UltraHDRModule from global scope (it's not on window object)
       const moduleFactory = (typeof UltraHDRModule !== 'undefined')
         ? UltraHDRModule
-        : window.UltraHDRModule
+        : globalThis.UltraHDRModule
 
       if (!moduleFactory) {
         throw new Error('UltraHDRModule disappeared after successful wait!')
@@ -258,7 +258,7 @@ export function useWasm(): UseWasmReturn {
     // Get UltraHDRModule from global scope
     const moduleFactory = (typeof UltraHDRModule !== 'undefined')
       ? UltraHDRModule
-      : window.UltraHDRModule
+      : globalThis.UltraHDRModule
 
     if (!moduleFactory) {
       throw new Error('UltraHDRModule not available')

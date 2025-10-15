@@ -1,16 +1,10 @@
 <script setup lang="ts">
-import type { ProcessingFile } from '~/types'
-
-interface Props {
-  completedFiles: ProcessingFile[]
-}
-
-defineProps<Props>()
+const filesStore = useFilesStore()
 </script>
 
 <template>
   <section
-    v-if="completedFiles.length > 0"
+    v-if="filesStore.completedFilesWithResults.length > 0"
     aria-labelledby="comparisons-heading"
     class="comparisons-section"
   >
@@ -19,7 +13,7 @@ defineProps<Props>()
         <UIcon name="i-lucide-images" class="mr-2" />
         Before & After Comparison
         <span class="ml-2 text-sm text-gray-500 dark:text-gray-400">
-          ({{ completedFiles.length }})
+          ({{ filesStore.completedFilesWithResults.length }})
         </span>
       </h2>
     </div>
@@ -27,7 +21,7 @@ defineProps<Props>()
     <!-- Comparison List -->
     <div class="space-y-6">
       <ImageComparison
-        v-for="file in completedFiles"
+        v-for="file in filesStore.completedFilesWithResults"
         :key="`comparison-${file.id}`"
         :file-name="file.name"
         :result="file.result!"

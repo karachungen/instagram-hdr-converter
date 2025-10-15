@@ -1,13 +1,5 @@
 <script setup lang="ts">
-import type { StatusConfig } from '~/types'
-
-interface Props {
-  statusBadge: StatusConfig
-  wasmReady: boolean
-  wasmError: string | null
-}
-
-defineProps<Props>()
+const wasmStore = useWasmStore()
 </script>
 
 <template>
@@ -32,17 +24,17 @@ defineProps<Props>()
 
     <!-- Status Badge -->
     <UBadge
-      :color="statusBadge.color"
+      :color="(wasmStore.statusBadge.color as any)"
       size="lg"
       variant="subtle"
       class="status-badge flex-shrink-0"
     >
       <UIcon
-        :name="statusBadge.icon"
+        :name="wasmStore.statusBadge.icon"
         class="mr-2"
-        :class="{ 'animate-spin': !wasmReady && !wasmError }"
+        :class="{ 'animate-spin': !wasmStore.wasmReady && !wasmStore.wasmError }"
       />
-      {{ statusBadge.label }}
+      {{ wasmStore.statusBadge.label }}
     </UBadge>
   </div>
 </template>
