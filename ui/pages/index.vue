@@ -159,6 +159,13 @@ const fileStats = computed(() => ({
 }))
 
 /**
+ * Get completed files with results for comparison
+ */
+const completedFilesWithResults = computed(() => {
+  return files.value.filter(f => f.status === 'completed' && f.result)
+})
+
+/**
  * Show file stats badge
  */
 const showFileStats = computed(() => fileStats.value.total > 0)
@@ -202,192 +209,46 @@ onUnmounted(() => {
       >
         <!-- Header -->
         <template #header>
-          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div class="flex-1">
-              <div class="flex items-center gap-3">
-                <div
-                  class="flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center"
-                >
-                  <UIcon name="i-lucide-image" class="text-2xl text-white" />
-                </div>
-                <div>
-                  <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
-                    Instagram HDR Converter
-                  </h1>
-                  <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                    Powered by Google's libultrahdr WebAssembly
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <!-- Status Badge -->
-            <UBadge
-              :color="statusBadge.color"
-              size="lg"
-              variant="subtle"
-              class="status-badge flex-shrink-0"
-            >
-              <UIcon
-                :name="statusBadge.icon"
-                class="mr-2"
-                :class="{ 'animate-spin': !wasmReady && !wasmError }"
-              />
-              {{ statusBadge.label }}
-            </UBadge>
-          </div>
+          <PageHeader
+            :status-badge="statusBadge"
+            :wasm-ready="wasmReady"
+            :wasm-error="wasmError"
+          />
 
           <!-- Stats Bar -->
-          <div v-if="showFileStats" class="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div class="stat-card bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
-              <div class="text-2xl font-bold text-gray-900 dark:text-white">
-                {{ fileStats.total }}
-              </div>
-              <div class="text-xs text-gray-600 dark:text-gray-400 uppercase tracking-wide">
-                Total Files
-              </div>
-            </div>
-
-            <div class="stat-card bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3">
-              <div class="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                {{ fileStats.ready }}
-              </div>
-              <div class="text-xs text-blue-600 dark:text-blue-400 uppercase tracking-wide">
-                Ready
-              </div>
-            </div>
-
-            <div class="stat-card bg-green-50 dark:bg-green-900/20 rounded-lg p-3">
-              <div class="text-2xl font-bold text-green-600 dark:text-green-400">
-                {{ fileStats.completed }}
-              </div>
-              <div class="text-xs text-green-600 dark:text-green-400 uppercase tracking-wide">
-                Completed
-              </div>
-            </div>
-
-            <div
-              v-if="fileStats.errors > 0"
-              class="stat-card bg-red-50 dark:bg-red-900/20 rounded-lg p-3"
-            >
-              <div class="text-2xl font-bold text-red-600 dark:text-red-400">
-                {{ fileStats.errors }}
-              </div>
-              <div class="text-xs text-red-600 dark:text-red-400 uppercase tracking-wide">
-                Errors
-              </div>
-            </div>
-          </div>
+          <StatsBar :stats="fileStats" :show="showFileStats" />
         </template>
 
         <!-- Body -->
         <div class="space-y-6">
           <!-- File Upload Section -->
-          <section aria-labelledby="upload-heading">
-            <h2 id="upload-heading" class="text-lg font-semibold mb-3 flex items-center">
-              <UIcon name="i-lucide-folder-open" class="mr-2" />
-              Upload Files
-            </h2>
-
-            <UFileUpload
-              v-model="fileInputValue"
-              icon="i-lucide-image"
-              label="Drop your HDR images here"
-              description="AVIF, HEIF, JPG - Multiple files supported"
-              multiple
-              accept="image/*"
-              layout="grid"
-              :disabled="isInitializing || !!wasmError"
-              @change="handleFilesSelected"
-            />
-          </section>
+          <FileUploadSection
+            v-model:file-input-value="fileInputValue"
+            :is-initializing="isInitializing"
+            :wasm-error="wasmError"
+            @files-selected="handleFilesSelected"
+          />
 
           <!-- File List Section -->
-          <section
-            v-if="files.length > 0"
-            aria-labelledby="files-heading"
-            class="file-list-section"
-          >
-            <div class="flex items-center justify-between mb-3">
-              <h2 id="files-heading" class="text-lg font-semibold flex items-center">
-                <UIcon name="i-lucide-files" class="mr-2" />
-                Files
-                <span class="ml-2 text-sm text-gray-500 dark:text-gray-400">
-                  ({{ files.length }})
-                </span>
-              </h2>
+          <FileListSection
+            :files="files"
+            :is-processing="isProcessing"
+            @remove="removeFile"
+            @clear-all="clearFiles"
+          />
 
-              <UButton
-                label="Clear All"
-                icon="i-lucide-trash-2"
-                color="neutral"
-                variant="outline"
-                size="xs"
-                :disabled="isProcessing"
-                aria-label="Clear all files"
-                @click="clearFiles"
-              />
-            </div>
-
-            <!-- File List -->
-            <div class="space-y-2 max-h-[400px] overflow-y-auto pr-2" role="list">
-              <FileItem
-                v-for="file in files"
-                :key="file.id"
-                :file="file"
-                role="listitem"
-                @remove="removeFile(file.id)"
-              />
-            </div>
-          </section>
+          <!-- Image Comparisons Section -->
+          <ComparisonSection :completed-files="completedFilesWithResults" />
 
           <!-- Actions Section -->
-          <section aria-label="Actions" class="actions-section">
-            <div class="flex flex-col sm:flex-row gap-3">
-              <UButton
-                label="Process All Images"
-                icon="i-lucide-play"
-                color="primary"
-                size="lg"
-                class="flex-1"
-                :disabled="!canProcess"
-                :loading="isProcessing"
-                @click="handleProcess"
-              >
-                <template #trailing>
-                  <kbd
-                    v-if="!isProcessing"
-                    class="hidden sm:inline-block px-2 py-1 text-xs font-semibold text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded"
-                  >
-                    ⌘P
-                  </kbd>
-                </template>
-              </UButton>
-
-              <UButton
-                :label="showLogs ? 'Hide Logs' : 'Show Logs'"
-                :icon="showLogs ? 'i-lucide-eye-off' : 'i-lucide-eye'"
-                color="neutral"
-                variant="outline"
-                size="lg"
-                @click="toggleLogs"
-              >
-                <template #trailing>
-                  <kbd
-                    class="hidden sm:inline-block px-2 py-1 text-xs font-semibold text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded"
-                  >
-                    ⌘L
-                  </kbd>
-                </template>
-              </UButton>
-            </div>
-
-            <!-- Help Text -->
-            <p v-if="!wasmReady" class="text-sm text-gray-500 dark:text-gray-400 mt-3 text-center">
-              <UIcon name="i-lucide-loader-2" class="animate-spin inline mr-1" />
-              Initializing WebAssembly module...
-            </p>
-          </section>
+          <ActionsBar
+            :can-process="canProcess"
+            :is-processing="isProcessing"
+            :show-logs="showLogs"
+            :wasm-ready="wasmReady"
+            @process="handleProcess"
+            @toggle-logs="toggleLogs"
+          />
 
           <!-- Processing Logs Section -->
           <Transition
@@ -407,13 +268,7 @@ onUnmounted(() => {
       </UCard>
 
       <!-- Footer Info -->
-      <div class="mt-6 text-center text-sm text-gray-600 dark:text-gray-400">
-        <p>All processing happens locally in your browser. Your images never leave your device.</p>
-        <p class="mt-2 flex items-center justify-center gap-2">
-          <UIcon name="i-lucide-shield-check" />
-          <span>Private • Secure • Fast</span>
-        </p>
-      </div>
+      <PageFooter />
     </div>
   </div>
 </template>
@@ -453,51 +308,6 @@ onUnmounted(() => {
     opacity: 1;
     transform: translateY(0);
   }
-}
-
-.stat-card {
-  transition: all 0.2s ease;
-}
-
-.stat-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.status-badge {
-  animation: fadeIn 0.3s ease-in;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-
-  to {
-    opacity: 1;
-  }
-}
-
-.file-list-section {
-  animation: fadeIn 0.3s ease-in;
-}
-
-/* Scrollbar styling */
-::-webkit-scrollbar {
-  width: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background-color: rgba(156, 163, 175, 0.3);
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(156, 163, 175, 0.5);
 }
 
 /* Dark mode adjustments */

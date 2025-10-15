@@ -13,6 +13,21 @@ const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 
 /**
+ * Get step display info
+ */
+const stepInfo = computed(() => {
+  if (!props.file.currentStep)
+    return null
+
+  const step = props.file.currentStep
+  return {
+    label: step.step === 'decode' ? 'Step 1/2: Decoding' : 'Step 2/2: Encoding',
+    message: step.message,
+    icon: step.step === 'decode' ? 'i-lucide-file-down' : 'i-lucide-file-up',
+  }
+})
+
+/**
  * Format file size in human-readable format
  */
 function formatFileSize(bytes: number): string {
@@ -100,6 +115,13 @@ const fileTypeDisplay = computed(() => {
           <p class="font-medium text-gray-900 dark:text-gray-100 truncate" :title="file.name">
             {{ file.name }}
           </p>
+
+          <!-- Processing Step Indicator -->
+          <div v-if="stepInfo" class="flex items-center gap-2 text-xs text-primary-600 dark:text-primary-400">
+            <UIcon :name="stepInfo.icon" class="animate-pulse" />
+            <span class="font-medium">{{ stepInfo.label }}</span>
+            <span class="text-gray-500 dark:text-gray-400">{{ stepInfo.message }}</span>
+          </div>
 
           <div class="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
             <span>{{ formatFileSize(file.size) }}</span>

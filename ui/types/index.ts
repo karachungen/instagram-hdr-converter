@@ -3,6 +3,26 @@ export type FileStatus = 'pending' | 'ready' | 'processing' | 'completed' | 'err
 
 export type LogType = 'info' | 'success' | 'error' | 'warning'
 
+export type ProcessingStepType = 'decode' | 'encode'
+
+export interface ProcessingStep {
+  step: ProcessingStepType
+  status: 'pending' | 'in_progress' | 'completed' | 'error'
+  message: string
+  progress?: number
+}
+
+export interface HdrProcessResult {
+  success: boolean
+  beforeImage: string
+  afterImage: string
+  originalSize: number
+  processedSize: number
+  width: number
+  height: number
+  error?: string
+}
+
 export interface ProcessingFile {
   id: string
   file: File
@@ -13,6 +33,8 @@ export interface ProcessingFile {
   status: FileStatus
   error: string | null
   progress?: number
+  currentStep?: ProcessingStep
+  result?: HdrProcessResult
 }
 
 export interface LogEntry {
@@ -33,7 +55,7 @@ export interface WasmModule {
   }
   HEAP8?: Int8Array
   _main?: () => void
-  callMain?: () => void
+  callMain?: (args?: string[]) => number | void
   [key: string]: unknown
 }
 
@@ -53,14 +75,12 @@ export interface StatusConfig {
   label: string
 }
 
-// UltraHDRModule is defined globally by the WASM script, not on window
-declare const UltraHDRModule: ((config: WasmModuleConfig) => Promise<WasmModule>) | undefined
-
 declare global {
   interface Window {
     UltraHDRModule?: (config: WasmModuleConfig) => Promise<WasmModule>
   }
 
   // Global variable (not on window)
-  const UltraHDRModule: ((config: WasmModuleConfig) => Promise<WasmModule>) | undefined
+
+  var UltraHDRModule: ((config: WasmModuleConfig) => Promise<WasmModule>) | undefined
 }

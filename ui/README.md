@@ -4,15 +4,17 @@ Modern Nuxt.js application for converting HDR images using Google's libultrahdr 
 
 ## Features
 
-- 🎨 HDR image processing using libultrahdr (compiled to WebAssembly)
-- 📁 Batch processing of multiple images
-- 💾 Client-side processing (private and secure)
-- 🚀 Real-time progress tracking
-- ⚡ Built with Nuxt 4, Vue 3, TypeScript
-- 🎨 Modern UI with Nuxt UI components
-- 🌗 Dark mode support
-- 📱 Responsive design
-- ♿ WCAG compliant accessibility
+- 🎨 **HDR Image Processing** - Two-step conversion (decode → encode) using libultrahdr WASM
+- 🔄 **Before/After Comparison** - Interactive slider to compare original vs processed images
+- 📊 **Real-time Progress** - Step-by-step indicators (decoding, encoding) with progress bars
+- 📁 **Batch Processing** - Process multiple images simultaneously
+- 💾 **Client-side Processing** - Private and secure, images never leave your device
+- ⚡ **Built with Nuxt 4** - Vue 3, TypeScript, modern tooling
+- 🎨 **Beautiful UI** - Nuxt UI components, smooth animations
+- 🌗 **Dark Mode** - Full dark mode support
+- 📱 **Responsive Design** - Works on all devices
+- ⌨️ **Keyboard Shortcuts** - ⌘P to process, ⌘L for logs
+- ♿ **Accessible** - WCAG compliant
 
 ## Quick Start
 
@@ -46,17 +48,26 @@ ui/
 │   └── ultrahdr_app.wasm    # WASM binary (generated)
 ├── assets/css/              # Global styles
 ├── components/              # Vue components
-│   ├── ErrorBoundary.vue
-│   ├── FileItem.vue
-│   ├── LoadingState.vue
-│   └── ProcessingLogs.vue
+│   ├── ActionsBar.vue       # Process & logs buttons
+│   ├── ComparisonSection.vue # Before/after results
+│   ├── ErrorBoundary.vue    # Error handling
+│   ├── FileItem.vue         # File list item
+│   ├── FileListSection.vue  # Files list container
+│   ├── FileUploadSection.vue # Upload dropzone
+│   ├── ImageComparison.vue  # Image slider comparison
+│   ├── LoadingState.vue     # Loading indicator
+│   ├── PageFooter.vue       # Privacy info
+│   ├── PageHeader.vue       # App title & status
+│   ├── ProcessingLogs.vue   # Log viewer
+│   └── StatsBar.vue         # Statistics cards
 ├── composables/             # Vue composables
-│   ├── useFileProcessor.ts
+│   ├── useFileProcessor.ts  # File processing
+│   ├── useHdrProcessor.ts   # HDR conversion service
 │   ├── useKeyboardShortcuts.ts
 │   ├── useLogs.ts
 │   └── useWasm.ts
 ├── pages/
-│   └── index.vue           # Main page
+│   └── index.vue           # Main page (clean, 300 lines)
 ├── types/
 │   └── index.ts            # TypeScript types
 └── utils/                  # Utility functions
@@ -107,6 +118,26 @@ pnpm typecheck        # TypeScript type checking
 # Utilities
 pnpm clean            # Clean build artifacts
 pnpm analyze          # Analyze bundle size
+```
+
+## How It Works
+
+1. **Upload** - Drop or select HDR images (AVIF, HEIF, JPG)
+2. **Process** - Click "Process All Images" or press ⌘P
+3. **Watch Progress** - See real-time decoding and encoding steps
+4. **Compare** - Use interactive slider to compare before/after images
+5. **Review Stats** - Check file sizes, dimensions, and compression ratios
+
+### Processing Pipeline
+
+```
+Input Image (HDR)
+    ↓
+Step 1: Decode HDR → RAW
+    ↓
+Step 2: Encode RAW → HDR (with proper dimensions)
+    ↓
+Output: Optimized HDR Image + Comparison View
 ```
 
 ## Keyboard Shortcuts

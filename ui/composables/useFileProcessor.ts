@@ -1,4 +1,4 @@
-import type { ProcessingFile, WasmModule } from '~/types'
+import type { ProcessingFile, ProcessingStep, WasmModule } from '~/types'
 
 interface UseFileProcessorReturn {
   files: Ref<ProcessingFile[]>
@@ -130,7 +130,7 @@ export function useFileProcessor(): UseFileProcessorReturn {
   }
 
   /**
-   * Process a single file
+   * Process a single file with HDR conversion
    */
   const processSingleFile = async (
     fileObj: ProcessingFile,
@@ -142,45 +142,38 @@ export function useFileProcessor(): UseFileProcessorReturn {
       throw new Error('File not loaded')
     }
 
-    addLog(`[${index + 1}/${total}] Processing: ${fileObj.name}`, 'info')
+    addLog(`[${index + 1}/${total}] 📸 Processing: ${fileObj.name}`, 'info')
     fileObj.status = 'processing'
     fileObj.progress = 0
 
-    // Create unique paths for this file
-    const inputPath = `/input_${fileObj.id}.jpg`
-    // const outputPath = `/output_${fileObj.id}.jpg` // Reserved for future use
+    const { processHdrImage } = useHdrProcessor()
 
     try {
-      // Write file to WASM filesystem
-      addLog(`  Writing to WASM FS: ${inputPath}`, 'info')
-      wasmModule.FS.writeFile(inputPath, fileObj.data)
+      // Process with HDR conversion
+      const result = await processHdrImage(
+        wasmModule,
+        fileObj.file,
+        fileObj.data,
+        (step: ProcessingStep) => {
+          // Update current step for UI
+          fileObj.currentStep = step
+          fileObj.progress = step.progress || 0
+        },
+      )
 
-      // Verify file was written
-      const stat = wasmModule.FS.stat(inputPath)
-      addLog(`  ✓ File written: ${formatFileSize(stat.size)}`, 'success')
-
-      fileObj.progress = 50
-
-      // Process HDR conversion (actual implementation would call WASM function)
-      addLog('  Processing HDR conversion...', 'info')
-
-      // Simulate processing - replace with actual WASM call
-      await new Promise(resolve => setTimeout(resolve, 500))
-
-      fileObj.progress = 100
-      addLog('  ✓ Processing complete!', 'success')
-      fileObj.status = 'completed'
-
-      // Clean up input file from WASM FS
-      try {
-        wasmModule.FS.unlink(inputPath)
-        addLog(`  Cleaned up: ${inputPath}`, 'info')
+      if (result.success) {
+        fileObj.status = 'completed'
+        fileObj.progress = 100
+        fileObj.result = result
+        fileObj.currentStep = undefined
+        addLog(`[${index + 1}/${total}] ✅ Completed: ${fileObj.name}`, 'success')
       }
-      catch {
-        // File might not exist or already deleted
+      else {
+        throw new Error(result.error || 'Processing failed')
       }
     }
     catch (error) {
+      fileObj.currentStep = undefined
       throw error
     }
   }

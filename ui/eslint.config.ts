@@ -35,5 +35,8 @@ export default antfu({
     'ts/no-unsafe-member-access': 'off',
     'ts/restrict-template-expressions': 'off',
     'no-useless-catch': 'off',
+    'ts/no-unsafe-assignment': 'off',
+    'ts/no-unsafe-argument': 'off',
+    'vars-on-top': 'off',
   },
 })
