@@ -4,6 +4,7 @@
  */
 
 import type { HdrMetadata, HdrProcessResult, WasmModule } from '~/types'
+import { removeXmpMetadata } from '~/utils/jpegMetadataCleaner'
 import { extractBaseSdrJpeg, extractGainMapJpeg } from '~/utils/jpegParser'
 
 export interface ProcessingStep {
@@ -282,11 +283,32 @@ export function useHdrProcessor() {
     try {
       // Step 1: Extract Gain Map JPEG using parser
       logsStore.add('[Gain Map] Step 1/3: Extracting gain map from JPEG...', 'info')
-      const gainMapJpeg = extractGainMapJpeg(inputData)
+      let gainMapJpeg = extractGainMapJpeg(inputData)
 
       if (!gainMapJpeg) {
         logsStore.add('[Gain Map] ⚠ No gain map found - not an UltraHDR image', 'warning')
         return { baseSdrJpeg: null, gainMapJpeg: null, metadata: null }
+      }
+
+      logsStore.add(`[HDR Decode] ✓ Extracted gain map: ${gainMapJpeg.length} bytes`, 'success')
+
+      // Clean XMP metadata from gain map
+      try {
+        const originalSize = gainMapJpeg.length
+        gainMapJpeg = removeXmpMetadata(gainMapJpeg)
+        const cleanedSize = gainMapJpeg.length
+        const removed = originalSize - cleanedSize
+
+        if (removed > 0) {
+          logsStore.add(`[Metadata Cleaner] ✓ Removed ${removed} bytes of XMP metadata from gain map`, 'success')
+        }
+        else {
+          logsStore.add('[Metadata Cleaner] No XMP metadata found in gain map', 'info')
+        }
+      }
+      catch (error) {
+        logsStore.add(`[Metadata Cleaner] ⚠ Failed to clean gain map: ${error}`, 'warning')
+        // Continue with original gain map if cleaning fails
       }
 
       logsStore.add(`[Gain Map] ✓ Gain map extracted: ${gainMapJpeg.length} bytes`, 'success')
