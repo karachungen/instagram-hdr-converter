@@ -125,8 +125,6 @@ const fileTypeDisplay = computed(() => {
 
           <div class="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
             <span>{{ formatFileSize(file.size) }}</span>
-            <span class="text-gray-300 dark:text-gray-600">•</span>
-            <span>{{ fileTypeDisplay }}</span>
           </div>
 
           <!-- Progress Bar -->
