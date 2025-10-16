@@ -2,12 +2,30 @@
 import { downloadAllImages } from '~/utils/download'
 
 const filesStore = useFilesStore()
+const toast = useToast()
 
 /**
  * Handle download all images
  */
 async function handleDownloadAll(): Promise<void> {
-  await downloadAllImages(filesStore.completedFilesWithResults)
+  try {
+    await downloadAllImages(filesStore.completedFilesWithResults)
+    toast.add({
+      title: 'Success',
+      description: `Downloaded ${filesStore.completedFilesWithResults.length} image(s) as ZIP`,
+      color: 'success',
+      icon: 'i-lucide-check-circle',
+    })
+  }
+  catch (error) {
+    console.error('Download all failed:', error)
+    toast.add({
+      title: 'Download Failed',
+      description: error instanceof Error ? error.message : 'Failed to download images',
+      color: 'error',
+      icon: 'i-lucide-alert-circle',
+    })
+  }
 }
 </script>
 

@@ -19,25 +19,36 @@ export function downloadImage(dataUrl: string, filename: string): void {
 }
 
 /**
- * Convert data URL to Blob
+ * Convert data URL or blob URL to Blob
  */
-function dataUrlToBlob(dataUrl: string): Blob {
-  const arr = dataUrl.split(',')
-  const mimeMatch = arr[0]?.match(/:(.*?);/)
-  const mime = mimeMatch ? mimeMatch[1] : 'image/jpeg'
-  const base64 = arr[1]
-
-  if (!base64) {
-    throw new Error('Invalid data URL')
+async function urlToBlob(url: string): Promise<Blob> {
+  // If it's a blob URL, fetch it directly
+  if (url.startsWith('blob:')) {
+    const response = await fetch(url)
+    return response.blob()
   }
 
-  const bstr = atob(base64)
-  let n = bstr.length
-  const u8arr = new Uint8Array(n)
-  while (n--) {
-    u8arr[n] = bstr.charCodeAt(n)
+  // If it's a data URL, convert it
+  if (url.startsWith('data:')) {
+    const arr = url.split(',')
+    const mimeMatch = arr[0]?.match(/:(.*?);/)
+    const mime = mimeMatch ? mimeMatch[1] : 'image/jpeg'
+    const base64 = arr[1]
+
+    if (!base64) {
+      throw new Error('Invalid data URL')
+    }
+
+    const bstr = atob(base64)
+    let n = bstr.length
+    const u8arr = new Uint8Array(n)
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n)
+    }
+    return new Blob([u8arr], { type: mime })
   }
-  return new Blob([u8arr], { type: mime })
+
+  throw new Error('Unsupported URL format. Expected blob: or data: URL')
 }
 
 /**
@@ -53,15 +64,15 @@ export async function downloadAllImages(files: ProcessingFile[]): Promise<void> 
   const zip = new JSZip()
 
   // Add each processed image to the zip
-  completedFiles.forEach((file) => {
+  for (const file of completedFiles) {
     if (!file.result?.afterImage)
-      return
+      continue
 
-    const blob = dataUrlToBlob(file.result.afterImage)
+    const blob = await urlToBlob(file.result.afterImage)
     const baseName = file.name.replace(/\.[^/.]+$/, '') // Remove extension
     const filename = `${baseName}_processed.jpg`
     zip.file(filename, blob)
-  })
+  }
 
   // Generate and download the zip file
   const content = await zip.generateAsync({ type: 'blob' })

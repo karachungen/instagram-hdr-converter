@@ -14,7 +14,7 @@ const fileInputValue = defineModel<File[]>({ default: [] })
       v-model="fileInputValue"
       icon="i-lucide-image"
       label="Drop your HDR images here"
-      description="AVIF, HEIF, JPG - Multiple files supported"
+      description="JPG files supported - Multiple files supported"
       multiple
       accept="image/*"
       layout="grid"

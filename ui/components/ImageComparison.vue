@@ -181,8 +181,6 @@ function handleDownload(): void {
 
   display: block;
   width: 100%;
-  min-height: 500px;
-  max-height: 80vh;
   aspect-ratio: auto;
 }
 
