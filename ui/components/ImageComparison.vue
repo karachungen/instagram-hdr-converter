@@ -7,8 +7,7 @@
  * Uses @img-comparison-slider/vue for before/after comparison
  */
 
-import type { HdrProcessResult } from '~/composables/useHdrProcessor'
-import type { HdrMetadata } from '~/types'
+import type { HdrMetadata, HdrProcessResult } from '~/types'
 import { ImgComparisonSlider } from '@img-comparison-slider/vue'
 import { downloadImage } from '~/utils/download'
 import { formatBytes } from '~/utils/format'
@@ -20,6 +19,23 @@ interface Props {
 
 const props = defineProps<Props>()
 const toast = useToast()
+
+// Toggle between HDR and SDR mode
+const showSdr = ref(false)
+
+// Computed images based on mode
+const currentBeforeImage = computed(() => {
+  return showSdr.value ? props.result.beforeImageSdr : props.result.beforeImage
+})
+
+const currentAfterImage = computed(() => {
+  return showSdr.value ? props.result.afterImageSdr : props.result.afterImage
+})
+
+// Check if SDR images are available
+const hasSdrImages = computed(() => {
+  return !!props.result.beforeImageSdr && !!props.result.afterImageSdr
+})
 
 const compressionRatio = computed(() => {
   if (!props.result.processedSize || !props.result.originalSize)
@@ -147,6 +163,24 @@ function handleDownload(): void {
           </h3>
         </div>
         <div class="flex items-center gap-2">
+          <!-- HDR/SDR Toggle -->
+          <UButtonGroup v-if="hasSdrImages" size="sm">
+            <UButton
+              :color="!showSdr ? 'primary' : 'neutral'"
+              :variant="!showSdr ? 'solid' : 'soft'"
+              @click="showSdr = false"
+            >
+              HDR
+            </UButton>
+            <UButton
+              :color="showSdr ? 'primary' : 'neutral'"
+              :variant="showSdr ? 'solid' : 'soft'"
+              @click="showSdr = true"
+            >
+              SDR
+            </UButton>
+          </UButtonGroup>
+
           <UButton
             icon="i-lucide-download"
             color="primary"
@@ -169,10 +203,10 @@ function handleDownload(): void {
       <ImgComparisonSlider class="comparison-slider">
         <!-- eslint-disable -->
         <!-- <template #first> -->
-          <img slot="first" :src="result.beforeImage" style="width: 100%;" alt="Before processing"
+          <img slot="first" :src="currentBeforeImage" style="width: 100%;" alt="Before processing"
             class="comparison-image">
         <!-- </template> -->
-          <img slot="second" :src="result.afterImage" style="width: 100%; " alt="After processing"
+          <img slot="second" :src="currentAfterImage" style="width: 100%; " alt="After processing"
             class="comparison-image">
         <div />
         <!-- eslint-disable -->

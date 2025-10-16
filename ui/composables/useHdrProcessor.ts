@@ -3,26 +3,13 @@
  * Handles two-step HDR conversion process with metadata extraction
  */
 
-import type { HdrMetadata, WasmModule } from '~/types'
+import type { HdrMetadata, HdrProcessResult, WasmModule } from '~/types'
 
 export interface ProcessingStep {
   step: 'decode' | 'encode'
   status: 'pending' | 'in_progress' | 'completed' | 'error'
   message: string
   progress?: number
-}
-
-export interface HdrProcessResult {
-  success: boolean
-  beforeImage: string // Data URL of original image
-  afterImage: string // Data URL of processed image
-  originalSize: number
-  processedSize: number
-  width: number
-  height: number
-  metadataOriginal?: HdrMetadata
-  metadataProcessed?: HdrMetadata
-  error?: string
 }
 
 export function useHdrProcessor() {
@@ -139,8 +126,107 @@ export function useHdrProcessor() {
   }
 
   /**
+   * Create blob URL from RGBA8888 data for display
+   */
+  function createBlobUrlFromRGBA(rgba: Uint8Array, width: number, height: number): string {
+    const canvas = document.createElement('canvas')
+    canvas.width = width
+    canvas.height = height
+    const ctx = canvas.getContext('2d')
+
+    if (!ctx) {
+      throw new Error('Failed to get canvas context')
+    }
+
+    // Create ImageData from RGBA array
+    const imageData = new ImageData(new Uint8ClampedArray(rgba), width, height)
+    ctx.putImageData(imageData, 0, 0)
+
+    // Convert canvas to blob URL
+    return canvas.toDataURL('image/png')
+  }
+
+  /**
+   * Extract SDR base image from UltraHDR JPEG using browser's JPEG decoder
+   * The browser automatically decodes the base (SDR) image, ignoring gain map
+   * Returns RGBA8888 format (4 bytes per pixel) for ultrahdr_app encoding
+   */
+  async function extractSdrFromJpeg(
+    file: File,
+    width: number,
+    height: number,
+  ): Promise<Uint8Array | null> {
+    try {
+      logsStore.add('[SDR Extract] Using browser to decode base image...', 'info')
+
+      return await new Promise((resolve, reject) => {
+        const img = new Image()
+        const url = URL.createObjectURL(file)
+
+        img.onload = () => {
+          try {
+            // Create canvas to extract pixel data
+            const canvas = document.createElement('canvas')
+            canvas.width = width
+            canvas.height = height
+            const ctx = canvas.getContext('2d')
+
+            if (!ctx) {
+              URL.revokeObjectURL(url)
+              reject(new Error('Failed to get canvas context'))
+              return
+            }
+
+            // Draw image (browser decodes SDR base image)
+            ctx.drawImage(img, 0, 0, width, height)
+
+            // Get RGBA pixel data
+            const imageData = ctx.getImageData(0, 0, width, height)
+            const rgba = imageData.data
+
+            console.log(`[SDR Extract] Canvas size: ${width}x${height}`)
+            console.log(`[SDR Extract] RGBA8888 data size: ${rgba.length} bytes (${width * height * 4})`)
+
+            // Convert Uint8ClampedArray to Uint8Array for WASM
+            const rgba8888 = new Uint8Array(rgba)
+
+            URL.revokeObjectURL(url)
+            logsStore.add(`[SDR Extract] ✓ Extracted RGBA8888: ${rgba8888.length} bytes (${width}x${height})`, 'success')
+            resolve(rgba8888)
+          }
+          catch (error) {
+            URL.revokeObjectURL(url)
+            reject(error)
+          }
+        }
+
+        img.onerror = () => {
+          URL.revokeObjectURL(url)
+          reject(new Error('Failed to load image for SDR extraction'))
+        }
+
+        img.src = url
+      })
+    }
+    catch (error) {
+      logsStore.add(`[SDR Extract] Failed: ${error}`, 'error')
+      return null
+    }
+  }
+
+  /**
    * Step 1: Decode HDR to RAW (with fresh WASM module) and extract metadata
-   * Command: ultrahdr_app -m 1 -j image.jpg -z image.raw -f metadata.cfg
+   *
+   * UltraHDR JPEG contains:
+   * - Base image (SDR, 8-bit YUV420)
+   * - Gain map (HDR enhancement data)
+   *
+   * Mode 1 decoding outputs the reconstructed HDR image (P010 format)
+   * We need to extract BOTH SDR and HDR for proper re-encoding
+   *
+   * Commands:
+   * 1. ultrahdr_app -m 1 -j image.jpg -z hdr.raw -f metadata.cfg  (get HDR + metadata)
+   * 2. Need to decode base SDR separately
    */
   async function decodeHdrToRaw(
     inputData: Uint8Array,
@@ -148,7 +234,7 @@ export function useHdrProcessor() {
     outputPath: string,
     metadataPath: string,
     onProgress: (step: ProcessingStep) => void,
-  ): Promise<{ rawData: Uint8Array, metadata: HdrMetadata | null }> {
+  ): Promise<{ rawData: Uint8Array, sdrData: Uint8Array | null, metadata: HdrMetadata | null }> {
     onProgress({
       step: 'decode',
       status: 'in_progress',
@@ -169,21 +255,47 @@ export function useHdrProcessor() {
       freshModule.FS.writeFile(inputPath, inputData)
       console.log('[FS] Wrote input file:', inputPath)
 
-      // Run decode command with metadata extraction
-      const decodeArgs = ['-m', '1', '-j', inputPath, '-z', outputPath, '-f', metadataPath]
+      // Decode HDR (P010) with metadata extraction
+      const hdrPath = outputPath.replace('.raw', '_hdr.raw')
+
+      const decodeArgs = ['-m', '1', '-j', inputPath, '-z', hdrPath, '-f', metadataPath]
+      logsStore.add(`[HDR Decode] Step 1/2: Extracting HDR (P010) data...`, 'info')
       logsStore.add(`[HDR Decode] Calling: ultrahdr_app ${decodeArgs.join(' ')}`, 'info')
-      console.log('[WASM CMD] Decode:', decodeArgs)
+      console.log('[WASM CMD] Decode HDR:', decodeArgs)
 
       if (freshModule.callMain) {
         const result = freshModule.callMain(decodeArgs)
-        console.log('[WASM RESULT] Decode returned:', result)
-        logsStore.add(`[HDR Decode] Command returned: ${result}`, 'info')
+        console.log('[WASM RESULT] Decode HDR returned:', result)
+        logsStore.add(`[HDR Decode] HDR decode returned: ${result}`, 'info')
       }
 
-      // Read RAW output from FS and save to browser memory
-      const rawData = freshModule.FS.readFile(outputPath)
-      console.log('[FS] Read RAW from FS, size:', rawData.length)
-      logsStore.add(`[HDR Decode] Success: RAW data (${rawData.length} bytes)`, 'success')
+      // Read HDR RAW output from FS
+      const rawData = freshModule.FS.readFile(hdrPath)
+      console.log('[FS] Read HDR RAW from FS, size:', rawData.length)
+      logsStore.add(`[HDR Decode] ✓ HDR data extracted: ${rawData.length} bytes`, 'success')
+
+      // Extract SDR base image using browser's JPEG decoder
+      // UltraHDR JPEG contains base SDR image that browsers decode automatically
+      // Mode 2 doesn't exist in ultrahdr_app - we use browser instead!
+      let sdrData: Uint8Array | null = null
+      try {
+        logsStore.add(`[HDR Decode] Step 2/2: Extracting SDR base image via browser...`, 'info')
+
+        // Get dimensions from the original file
+        const tempFile = new File([inputData as BlobPart], 'temp.jpg', { type: 'image/jpeg' })
+        const { width, height } = await getImageDimensions(tempFile)
+
+        // Extract and convert SDR to YUV420
+        sdrData = await extractSdrFromJpeg(tempFile, width, height)
+
+        if (sdrData) {
+          console.log('[Browser] SDR extracted and converted to YUV420, size:', sdrData.length)
+        }
+      }
+      catch (error) {
+        logsStore.add(`[HDR Decode] ⚠ Could not extract SDR via browser: ${error}`, 'warning')
+        console.log('[HDR Decode] SDR extraction failed:', error)
+      }
 
       // Read and parse metadata file
       let metadata: HdrMetadata | null = null
@@ -211,7 +323,7 @@ export function useHdrProcessor() {
         progress: 100,
       })
 
-      return { rawData, metadata }
+      return { rawData, sdrData, metadata }
     }
     catch (error) {
       const err = error as Error
@@ -279,11 +391,23 @@ export function useHdrProcessor() {
 
   /**
    * Step 2: Encode RAW to HDR (with fresh WASM module) using metadata
-   * Command: ultrahdr_app -m 0 -p image.raw -w 1080 -h 1080 -f metadata.cfg
+   *
+   * SOLUTION: Use BOTH HDR and SDR data for proper re-encoding
+   *
+   * Mode 0 with both inputs:
+   * -p : P010 HDR raw (10-bit)
+   * -y : RGBA8888 SDR raw (8-bit, 4 bytes per pixel)
+   * -f : Metadata config (gain map parameters)
+   *
+   * This way the library will use our metadata to generate the gain map correctly!
+   *
+   * Command: ultrahdr_app -m 0 -p hdr.raw -y sdr.raw -w 1080 -h 1080 -z output.jpg -f metadata.cfg
    */
   async function encodeRawToHdr(
     rawData: Uint8Array,
+    sdrData: Uint8Array | null,
     inputPath: string,
+    sdrPath: string,
     outputPath: string,
     width: number,
     height: number,
@@ -307,10 +431,37 @@ export function useHdrProcessor() {
       logsStore.add('[HDR Encode] Creating fresh WASM instance...', 'info')
       const freshModule = await reinitWasm()
 
-      // Write RAW file from browser memory to fresh FS
+      // Write HDR RAW file from browser memory to fresh FS
       freshModule.FS.writeFile(inputPath, rawData)
-      console.log('[FS] Wrote RAW file to fresh FS:', inputPath, 'size:', rawData.length)
-      logsStore.add(`[HDR Encode] RAW file restored: ${rawData.length} bytes`, 'info')
+      console.log('[FS] Wrote HDR RAW file to fresh FS:', inputPath, 'size:', rawData.length)
+      console.log('[Encode] Dimensions for encoding: width=', width, 'height=', height)
+      logsStore.add(`[HDR Encode] HDR file restored: ${rawData.length} bytes`, 'info')
+
+      // Calculate expected sizes for debugging
+      const expectedP010Size = width * height * 2 // P010 is 2 bytes per pixel (10-bit)
+      const expectedRGBA8888Size = width * height * 4 // RGBA8888 is 4 bytes per pixel
+      console.log(`[Encode] Expected HDR (P010) size: ${expectedP010Size} bytes`)
+      console.log(`[Encode] Expected SDR (RGBA8888) size: ${expectedRGBA8888Size} bytes`)
+
+      // Write SDR RAW file if available
+      if (sdrData) {
+        freshModule.FS.writeFile(sdrPath, sdrData)
+        console.log('[FS] Wrote SDR RAW file to fresh FS:', sdrPath, 'size:', sdrData.length)
+        logsStore.add(`[HDR Encode] SDR file written: ${sdrData.length} bytes (RGBA8888 format)`, 'info')
+
+        // Calculate expected RGBA8888 size
+        const expectedSize = width * height * 4
+        const sizeMatch = sdrData.length === expectedSize
+        logsStore.add(`[HDR Encode] SDR size check: ${sizeMatch ? '✓ correct' : '⚠ mismatch'} (expected: ${expectedSize}, got: ${sdrData.length})`, sizeMatch ? 'success' : 'warning')
+
+        if (!sizeMatch) {
+          logsStore.add(`[HDR Encode] ⚠ WARNING: Size mismatch may cause encoding failure!`, 'error')
+          console.error('[Encode] SDR size mismatch! This will likely cause WASM error')
+        }
+      }
+      else {
+        logsStore.add('[HDR Encode] ⚠ No SDR data available - will use fallback mode', 'warning')
+      }
 
       // Write metadata file if available
       if (metadata) {
@@ -333,24 +484,48 @@ export function useHdrProcessor() {
         logsStore.add('[HDR Encode] Metadata file written', 'info')
       }
 
-      // Run encode command with or without metadata
-      const encodeArgs = [
-        '-m',
-        '0',
-        '-p',
-        inputPath,
-        '-w',
-        String(width),
-        '-h',
-        String(height),
-        '-z',
-        outputPath,
-      ]
+      // Build encode command with both HDR and SDR if available
+      const encodeArgs = ['-m', '0']
+
+      // If we have both HDR and SDR data, use them both for accurate re-encoding
+      if (sdrData) {
+        logsStore.add('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'info')
+        logsStore.add('✓ OPTIMAL MODE: Using BOTH HDR and SDR inputs', 'success')
+        logsStore.add(`  • HDR input (-p): ${inputPath} [P010 10-bit]`, 'info')
+        logsStore.add(`  • SDR input (-y): ${sdrPath} [RGBA8888 8-bit]`, 'info')
+        logsStore.add(`  • Dimensions: ${width}x${height}`, 'info')
+        logsStore.add('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'info')
+        encodeArgs.push('-p', inputPath) // HDR (P010)
+        encodeArgs.push('-y', sdrPath) // SDR (RGBA8888)
+      }
+      else {
+        logsStore.add('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'warning')
+        logsStore.add('⚠ FALLBACK MODE: Using only HDR as base image', 'warning')
+        logsStore.add('  Metadata may not be preserved correctly!', 'warning')
+        logsStore.add('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'warning')
+        encodeArgs.push('-y', inputPath) // Only one input
+      }
+
+      // Add dimensions and output
+      encodeArgs.push('-w', String(width))
+      encodeArgs.push('-h', String(height))
+      encodeArgs.push('-z', outputPath)
 
       // Add metadata flag if available
       if (metadata) {
         encodeArgs.push('-f', metadataPath)
-        logsStore.add('[HDR Encode] Using original HDR metadata', 'info')
+        if (sdrData) {
+          logsStore.add('✓ Metadata configuration attached - will preserve original gain map parameters!', 'success')
+          logsStore.add(`  • maxContentBoost: ${Array.isArray(metadata.maxContentBoost) ? metadata.maxContentBoost.join(', ') : metadata.maxContentBoost}`, 'info')
+          logsStore.add(`  • minContentBoost: ${Array.isArray(metadata.minContentBoost) ? metadata.minContentBoost.join(', ') : metadata.minContentBoost}`, 'info')
+          logsStore.add(`  • gamma: ${Array.isArray(metadata.gamma) ? metadata.gamma.join(', ') : metadata.gamma}`, 'info')
+        }
+        else {
+          logsStore.add('⚠ Metadata file attached but may be ignored in fallback mode', 'warning')
+        }
+      }
+      else {
+        logsStore.add('ℹ No metadata available - library will use default gain map values', 'info')
       }
 
       logsStore.add(`[HDR Encode] Calling: ultrahdr_app ${encodeArgs.join(' ')}`, 'info')
@@ -365,7 +540,20 @@ export function useHdrProcessor() {
       // Read output from FS and save to browser memory
       const outputData = freshModule.FS.readFile(outputPath)
       console.log('[FS] Read output from FS, size:', outputData.length)
-      logsStore.add(`[HDR Encode] Success: output data (${outputData.length} bytes)`, 'success')
+      logsStore.add(`[HDR Encode] ✓ Output generated: ${outputData.length} bytes`, 'success')
+
+      // Summary
+      logsStore.add('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'success')
+      logsStore.add('✓ ENCODING COMPLETE', 'success')
+      if (sdrData) {
+        logsStore.add('  Mode: OPTIMAL (HDR + SDR + Metadata)', 'success')
+        logsStore.add('  Result: Metadata should be preserved!', 'success')
+      }
+      else {
+        logsStore.add('  Mode: FALLBACK (HDR only)', 'warning')
+        logsStore.add('  Result: Default metadata used', 'warning')
+      }
+      logsStore.add('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'success')
 
       onProgress({
         step: 'encode',
@@ -416,18 +604,23 @@ export function useHdrProcessor() {
       const metadataPath = `/metadata_${timestamp}.cfg`
 
       // Step 1: Decode with fresh WASM instance and extract metadata
-      // Returns RAW data and metadata stored in browser memory
-      console.log('[HDR] Step 1/2: Decoding and extracting metadata...')
-      const { rawData, metadata } = await decodeHdrToRaw(fileData, inputJpgPath, rawPath, metadataPath, onProgress)
-      console.log('[HDR] RAW data saved in browser:', rawData.length, 'bytes')
+      // Returns HDR RAW, SDR RAW (if available), and metadata stored in browser memory
+      console.log('[HDR] Step 1/3: Decoding and extracting metadata...')
+      const { rawData, sdrData, metadata } = await decodeHdrToRaw(fileData, inputJpgPath, rawPath, metadataPath, onProgress)
+      console.log('[HDR] HDR data saved in browser:', rawData.length, 'bytes')
+      if (sdrData) {
+        console.log('[HDR] SDR data saved in browser:', sdrData.length, 'bytes')
+      }
       if (metadata) {
         console.log('[HDR] Metadata extracted:', metadata)
       }
 
       // Step 2: Encode with fresh WASM instance using extracted metadata
-      // Uses RAW data and metadata from browser memory
-      console.log('[HDR] Step 2/2: Encoding with metadata...')
-      const processedData = await encodeRawToHdr(rawData, rawPath, outputPath, width, height, metadata, metadataPath, onProgress)
+      // Uses HDR RAW, SDR RAW, and metadata from browser memory
+      console.log('[HDR] Step 2/3: Encoding with metadata...')
+      const hdrPath = rawPath.replace('.raw', '_hdr.raw')
+      const sdrPath = rawPath.replace('.raw', '_sdr.raw')
+      const processedData = await encodeRawToHdr(rawData, sdrData, hdrPath, sdrPath, outputPath, width, height, metadata, metadataPath, onProgress)
       console.log('[HDR] Processed data in browser:', processedData.length, 'bytes')
 
       // Step 3: Extract metadata from processed image to verify preservation
@@ -444,42 +637,116 @@ export function useHdrProcessor() {
       )
 
       // Log metadata comparison
+      logsStore.add('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'info')
+      logsStore.add('METADATA VERIFICATION', 'info')
+      logsStore.add('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'info')
+
       if (metadata && metadataProcessed) {
         const isIdentical = JSON.stringify(metadata) === JSON.stringify(metadataProcessed)
         if (isIdentical) {
-          logsStore.add('✓ Metadata Verification: All values preserved correctly!', 'success')
+          logsStore.add('✓✓✓ SUCCESS! All metadata values preserved correctly!', 'success')
+          logsStore.add('  Original and processed metadata are identical', 'success')
         }
         else {
-          logsStore.add('⚠ Metadata Verification: Values differ between original and processed', 'warning')
+          logsStore.add('⚠ Values differ between original and processed', 'warning')
+
+          // Check which fields differ
+          const fields: (keyof HdrMetadata)[] = ['maxContentBoost', 'minContentBoost', 'gamma', 'offsetSdr', 'offsetHdr', 'hdrCapacityMin', 'hdrCapacityMax', 'useBaseColorSpace']
+          fields.forEach((field) => {
+            const origStr = JSON.stringify(metadata[field])
+            const procStr = JSON.stringify(metadataProcessed[field])
+            if (origStr !== procStr) {
+              logsStore.add(`  • ${field}: ${origStr} → ${procStr}`, 'warning')
+            }
+          })
+        }
+
+        if (sdrData) {
+          logsStore.add('✓ Used OPTIMAL mode (HDR + SDR + Metadata)', 'info')
+        }
+        else {
+          logsStore.add('⚠ Used FALLBACK mode (HDR only) - this may explain differences', 'warning')
         }
       }
       else if (metadata && !metadataProcessed) {
-        logsStore.add('⚠ Metadata Verification: Original metadata exists but processed metadata missing', 'warning')
+        logsStore.add('⚠ Original metadata exists but processed metadata missing', 'warning')
       }
       else if (!metadata && metadataProcessed) {
-        logsStore.add('ℹ Metadata Verification: No original metadata, but processed image has metadata', 'info')
+        logsStore.add('ℹ No original metadata, but processed image has metadata', 'info')
       }
       else {
-        logsStore.add('ℹ Metadata Verification: No metadata available for comparison', 'info')
+        logsStore.add('ℹ No metadata available for comparison', 'info')
       }
 
-      // Create data URLs for comparison
+      logsStore.add('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'info')
+
+      // Create HDR data URLs for comparison
       const beforeBlob = new Blob([fileData as BlobPart], { type: file.type })
       const afterBlob = new Blob([processedData as BlobPart], { type: 'image/jpeg' })
 
       const beforeImage = URL.createObjectURL(beforeBlob)
       const afterImage = URL.createObjectURL(afterBlob)
 
+      // Create SDR data URLs for comparison
+      logsStore.add('[SDR URLs] Creating SDR preview images...', 'info')
+      let beforeImageSdr = ''
+      let afterImageSdr = ''
+
+      if (sdrData) {
+        // We already have original SDR from decoding
+        try {
+          beforeImageSdr = createBlobUrlFromRGBA(sdrData, width, height)
+          logsStore.add('[SDR URLs] ✓ Original SDR preview created', 'success')
+        }
+        catch (error) {
+          logsStore.add(`[SDR URLs] ⚠ Failed to create original SDR preview: ${error}`, 'warning')
+        }
+      }
+
+      // Extract SDR from processed image
+      try {
+        const processedFile = new File([processedData as BlobPart], 'processed.jpg', { type: 'image/jpeg' })
+        const processedSdrData = await extractSdrFromJpeg(processedFile, width, height)
+        if (processedSdrData) {
+          afterImageSdr = createBlobUrlFromRGBA(processedSdrData, width, height)
+          logsStore.add('[SDR URLs] ✓ Processed SDR preview created', 'success')
+        }
+      }
+      catch (error) {
+        logsStore.add(`[SDR URLs] ⚠ Failed to create processed SDR preview: ${error}`, 'warning')
+      }
+
       // No FS cleanup needed - each step uses fresh WASM instance
       logsStore.add('Using fresh WASM instances - no cleanup needed', 'info')
 
       const duration = ((performance.now() - startTime) / 1000).toFixed(2)
-      logsStore.add(`=== HDR Processing Complete: ${file.name} (${duration}s) ===\n`, 'success')
+      const sizeChangeNum = (processedData.length - fileData.length) / fileData.length * 100
+      const sizeChange = sizeChangeNum.toFixed(1)
+
+      logsStore.add('', 'info')
+      logsStore.add('═══════════════════════════════════════════', 'success')
+      logsStore.add('✓ HDR PROCESSING COMPLETE!', 'success')
+      logsStore.add('═══════════════════════════════════════════', 'success')
+      logsStore.add(`File: ${file.name}`, 'info')
+      logsStore.add(`Duration: ${duration}s`, 'info')
+      logsStore.add(`Original: ${(fileData.length / 1024).toFixed(2)} KB`, 'info')
+      logsStore.add(`Processed: ${(processedData.length / 1024).toFixed(2)} KB (${sizeChangeNum > 0 ? '+' : ''}${sizeChange}%)`, 'info')
+      logsStore.add(`Resolution: ${width}x${height}`, 'info')
+      if (sdrData) {
+        logsStore.add('Mode: ✓ OPTIMAL (HDR + SDR + Metadata)', 'success')
+      }
+      else {
+        logsStore.add('Mode: ⚠ FALLBACK (HDR only)', 'warning')
+      }
+      logsStore.add('═══════════════════════════════════════════', 'success')
+      logsStore.add('', 'info')
 
       return {
         success: true,
         beforeImage,
         afterImage,
+        beforeImageSdr,
+        afterImageSdr,
         originalSize: fileData.length,
         processedSize: processedData.length,
         width,
@@ -496,6 +763,8 @@ export function useHdrProcessor() {
         success: false,
         beforeImage: '',
         afterImage: '',
+        beforeImageSdr: '',
+        afterImageSdr: '',
         originalSize: file.size,
         processedSize: 0,
         width: 0,

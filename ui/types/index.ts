@@ -25,8 +25,10 @@ export interface HdrMetadata {
 
 export interface HdrProcessResult {
   success: boolean
-  beforeImage: string
-  afterImage: string
+  beforeImage: string // Data URL of original image (HDR)
+  afterImage: string // Data URL of processed image (HDR)
+  beforeImageSdr: string // Data URL of original image (SDR)
+  afterImageSdr: string // Data URL of processed image (SDR)
   originalSize: number
   processedSize: number
   width: number
