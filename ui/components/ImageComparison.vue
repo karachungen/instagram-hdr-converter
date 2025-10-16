@@ -20,21 +20,39 @@ interface Props {
 const props = defineProps<Props>()
 const toast = useToast()
 
-// Toggle between HDR and SDR mode
-const showSdr = ref(false)
+// Toggle between HDR, SDR, and Gain Map modes
+type ViewMode = 'hdr' | 'sdr' | 'gainmap'
+const viewMode = ref<ViewMode>('hdr')
 
 // Computed images based on mode
 const currentBeforeImage = computed(() => {
-  return showSdr.value ? props.result.beforeImageSdr : props.result.beforeImage
+  if (viewMode.value === 'sdr') {
+    return props.result.beforeImageSdr
+  }
+  if (viewMode.value === 'gainmap') {
+    return props.result.gainMapImage || props.result.beforeImage
+  }
+  return props.result.beforeImage
 })
 
 const currentAfterImage = computed(() => {
-  return showSdr.value ? props.result.afterImageSdr : props.result.afterImage
+  if (viewMode.value === 'sdr') {
+    return props.result.afterImageSdr
+  }
+  if (viewMode.value === 'gainmap') {
+    return props.result.gainMapImage || props.result.afterImage
+  }
+  return props.result.afterImage
 })
 
 // Check if SDR images are available
 const hasSdrImages = computed(() => {
   return !!props.result.beforeImageSdr && !!props.result.afterImageSdr
+})
+
+// Check if gain map is available
+const hasGainMap = computed(() => {
+  return !!props.result.gainMapImage
 })
 
 const compressionRatio = computed(() => {
@@ -163,21 +181,33 @@ function handleDownload(): void {
           </h3>
         </div>
         <div class="flex items-center gap-2">
-          <!-- HDR/SDR Toggle -->
-          <UButtonGroup v-if="hasSdrImages" size="sm">
+          <!-- HDR/SDR/Gain Map Toggle -->
+          <UButtonGroup v-if="hasSdrImages || hasGainMap" size="sm" orientation="horizontal" class="gap-1">
             <UButton
-              :color="!showSdr ? 'primary' : 'neutral'"
-              :variant="!showSdr ? 'solid' : 'soft'"
-              @click="showSdr = false"
+              :color="viewMode === 'hdr' ? 'primary' : 'neutral'"
+              :variant="viewMode === 'hdr' ? 'solid' : 'outline'"
+              @click="viewMode = 'hdr'"
             >
+              <UIcon name="i-lucide-sun" class="mr-1" />
               HDR
             </UButton>
             <UButton
-              :color="showSdr ? 'primary' : 'neutral'"
-              :variant="showSdr ? 'solid' : 'soft'"
-              @click="showSdr = true"
+              v-if="hasSdrImages"
+              :color="viewMode === 'sdr' ? 'primary' : 'neutral'"
+              :variant="viewMode === 'sdr' ? 'solid' : 'outline'"
+              @click="viewMode = 'sdr'"
             >
+              <UIcon name="i-lucide-monitor" class="mr-1" />
               SDR
+            </UButton>
+            <UButton
+              v-if="hasGainMap"
+              :color="viewMode === 'gainmap' ? 'primary' : 'neutral'"
+              :variant="viewMode === 'gainmap' ? 'solid' : 'outline'"
+              @click="viewMode = 'gainmap'"
+            >
+              <UIcon name="i-lucide-layers" class="mr-1" />
+              Gain Map
             </UButton>
           </UButtonGroup>
 
@@ -190,10 +220,6 @@ function handleDownload(): void {
           >
             Download
           </UButton>
-          <UBadge color="success" variant="soft">
-            <UIcon name="i-lucide-check-circle" class="mr-1" />
-            Processed
-          </UBadge>
         </div>
       </div>
     </template>
@@ -216,12 +242,12 @@ function handleDownload(): void {
       <div class="comparison-labels">
         <div class="label label-before">
           <UBadge color="neutral" variant="solid" size="sm">
-            Before
+            {{ viewMode === 'gainmap' ? 'Gain Map' : 'Before' }}
           </UBadge>
         </div>
         <div class="label label-after">
           <UBadge color="primary" variant="solid" size="sm">
-            After
+            {{ viewMode === 'gainmap' ? 'Gain Map' : 'After' }}
           </UBadge>
         </div>
       </div>

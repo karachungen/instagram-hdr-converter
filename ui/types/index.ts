@@ -29,6 +29,7 @@ export interface HdrProcessResult {
   afterImage: string // Data URL of processed image (HDR)
   beforeImageSdr: string // Data URL of original image (SDR)
   afterImageSdr: string // Data URL of processed image (SDR)
+  gainMapImage?: string // Data URL of gain map (extracted from original)
   originalSize: number
   processedSize: number
   width: number
