@@ -92,7 +92,6 @@ export default defineNuxtConfig({
         output: {
           manualChunks: {
             vendor: ['vue'],
-            ui: ['@nuxt/ui'],
           },
         },
       },
