@@ -12,6 +12,17 @@ export interface ProcessingStep {
   progress?: number
 }
 
+export interface HdrMetadata {
+  maxContentBoost: number | number[]
+  minContentBoost: number | number[]
+  gamma: number | number[]
+  offsetSdr: number | number[]
+  offsetHdr: number | number[]
+  hdrCapacityMin: number
+  hdrCapacityMax: number
+  useBaseColorSpace: number
+}
+
 export interface HdrProcessResult {
   success: boolean
   beforeImage: string
@@ -20,6 +31,8 @@ export interface HdrProcessResult {
   processedSize: number
   width: number
   height: number
+  metadataOriginal?: HdrMetadata
+  metadataProcessed?: HdrMetadata
   error?: string
 }
 

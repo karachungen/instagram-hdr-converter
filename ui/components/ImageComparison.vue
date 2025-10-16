@@ -8,6 +8,7 @@
  */
 
 import type { HdrProcessResult } from '~/composables/useHdrProcessor'
+import type { HdrMetadata } from '~/types'
 import { ImgComparisonSlider } from '@img-comparison-slider/vue'
 import { downloadImage } from '~/utils/download'
 import { formatBytes } from '~/utils/format'
@@ -28,6 +29,84 @@ const compressionRatio = computed(() => {
 
 const sizeReduction = computed(() => {
   return props.result.originalSize - props.result.processedSize
+})
+
+/**
+ * Format metadata value (handles both single values and arrays)
+ */
+function formatMetadataValue(value: number | number[] | undefined): string {
+  if (value === undefined)
+    return 'N/A'
+
+  // Ensure it's always an array for consistent handling
+  const values = Array.isArray(value) ? value : [value]
+
+  if (!values || values.length === 0)
+    return 'N/A'
+
+  if (values.length === 1) {
+    return values[0]?.toFixed(4) ?? 'N/A'
+  }
+
+  return values.map(v => v?.toFixed(4) ?? 'N/A').join(', ')
+}
+
+/**
+ * Format offset values with exponential notation
+ */
+function formatOffsetValue(value: number | number[] | undefined): string {
+  if (value === undefined)
+    return 'N/A'
+
+  // Ensure it's always an array for consistent handling
+  const values = Array.isArray(value) ? value : [value]
+
+  if (!values || values.length === 0)
+    return 'N/A'
+
+  if (values.length === 1) {
+    return values[0]?.toExponential(2) ?? 'N/A'
+  }
+
+  return values.map(v => v?.toExponential(2) ?? 'N/A').join(', ')
+}
+
+/**
+ * Check if a specific metadata field has changed
+ */
+function metadataChanged(field: keyof HdrMetadata): boolean {
+  if (!props.result.metadataOriginal || !props.result.metadataProcessed)
+    return false
+
+  const original = props.result.metadataOriginal[field]
+  const processed = props.result.metadataProcessed[field]
+
+  // Normalize to arrays for comparison
+  const originalArray = Array.isArray(original) ? original : [original]
+  const processedArray = Array.isArray(processed) ? processed : [processed]
+
+  return JSON.stringify(originalArray) !== JSON.stringify(processedArray)
+}
+
+/**
+ * Check if all metadata fields match
+ */
+const allMetadataMatches = computed(() => {
+  if (!props.result.metadataOriginal || !props.result.metadataProcessed)
+    return false
+
+  const fields: (keyof HdrMetadata)[] = [
+    'maxContentBoost',
+    'minContentBoost',
+    'gamma',
+    'offsetSdr',
+    'offsetHdr',
+    'hdrCapacityMin',
+    'hdrCapacityMax',
+    'useBaseColorSpace',
+  ]
+
+  return fields.every(field => !metadataChanged(field))
 })
 
 /**
@@ -116,44 +195,164 @@ function handleDownload(): void {
 
     <!-- Stats -->
     <template #footer>
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-        <div class="stat-item">
-          <div class="stat-label">
-            Dimensions
+      <div class="space-y-4">
+        <!-- Basic Stats -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+          <div class="stat-item">
+            <div class="stat-label">
+              Dimensions
+            </div>
+            <div class="stat-value">
+              {{ result.width }}×{{ result.height }}
+            </div>
           </div>
-          <div class="stat-value">
-            {{ result.width }}×{{ result.height }}
+
+          <div class="stat-item">
+            <div class="stat-label">
+              Original Size
+            </div>
+            <div class="stat-value">
+              {{ formatBytes(result.originalSize) }}
+            </div>
+          </div>
+
+          <div class="stat-item">
+            <div class="stat-label">
+              Processed Size
+            </div>
+            <div class="stat-value">
+              {{ formatBytes(result.processedSize) }}
+            </div>
+          </div>
+
+          <div class="stat-item">
+            <div class="stat-label">
+              Size Change
+            </div>
+            <div class="stat-value"
+              :class="sizeReduction > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">
+              {{ sizeReduction > 0 ? '-' : '+' }}{{ formatBytes(Math.abs(sizeReduction)) }}
+              <span class="text-xs">
+                ({{ compressionRatio }}%)
+              </span>
+            </div>
           </div>
         </div>
 
-        <div class="stat-item">
-          <div class="stat-label">
-            Original Size
+        <!-- HDR Metadata Comparison -->
+        <div v-if="result.metadataOriginal || result.metadataProcessed" class="pt-4 border-t border-gray-200 dark:border-gray-700">
+          <div class="flex items-center gap-2 mb-4">
+            <UIcon name="i-lucide-info" class="text-primary" />
+            <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300">
+              HDR Metadata Comparison
+            </h4>
           </div>
-          <div class="stat-value">
-            {{ formatBytes(result.originalSize) }}
-          </div>
-        </div>
 
-        <div class="stat-item">
-          <div class="stat-label">
-            Processed Size
-          </div>
-          <div class="stat-value">
-            {{ formatBytes(result.processedSize) }}
-          </div>
-        </div>
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Original Metadata -->
+            <div v-if="result.metadataOriginal" class="space-y-3">
+              <div class="flex items-center gap-2 mb-2">
+                <UBadge color="neutral" size="sm">Before</UBadge>
+                <span class="text-xs text-gray-500 dark:text-gray-400">Original Image</span>
+              </div>
+              <div class="space-y-2 text-sm">
+                <div class="flex justify-between py-1 border-b border-gray-100 dark:border-gray-800">
+                  <span class="text-gray-600 dark:text-gray-400">Max Content Boost</span>
+                  <span class="font-medium">{{ formatMetadataValue(result.metadataOriginal.maxContentBoost) }}</span>
+                </div>
+                <div class="flex justify-between py-1 border-b border-gray-100 dark:border-gray-800">
+                  <span class="text-gray-600 dark:text-gray-400">Min Content Boost</span>
+                  <span class="font-medium">{{ formatMetadataValue(result.metadataOriginal.minContentBoost) }}</span>
+                </div>
+                <div class="flex justify-between py-1 border-b border-gray-100 dark:border-gray-800">
+                  <span class="text-gray-600 dark:text-gray-400">Gamma</span>
+                  <span class="font-medium">{{ formatMetadataValue(result.metadataOriginal.gamma) }}</span>
+                </div>
+                <div class="flex justify-between py-1 border-b border-gray-100 dark:border-gray-800">
+                  <span class="text-gray-600 dark:text-gray-400">HDR Capacity Min</span>
+                  <span class="font-medium">{{ result.metadataOriginal.hdrCapacityMin }}</span>
+                </div>
+                <div class="flex justify-between py-1 border-b border-gray-100 dark:border-gray-800">
+                  <span class="text-gray-600 dark:text-gray-400">HDR Capacity Max</span>
+                  <span class="font-medium">{{ result.metadataOriginal.hdrCapacityMax }}</span>
+                </div>
+                <div class="flex justify-between py-1 border-b border-gray-100 dark:border-gray-800">
+                  <span class="text-gray-600 dark:text-gray-400">Offset SDR</span>
+                  <span class="font-medium font-mono text-xs">{{ formatOffsetValue(result.metadataOriginal.offsetSdr) }}</span>
+                </div>
+                <div class="flex justify-between py-1 border-b border-gray-100 dark:border-gray-800">
+                  <span class="text-gray-600 dark:text-gray-400">Offset HDR</span>
+                  <span class="font-medium font-mono text-xs">{{ formatOffsetValue(result.metadataOriginal.offsetHdr) }}</span>
+                </div>
+                <div class="flex justify-between py-1">
+                  <span class="text-gray-600 dark:text-gray-400">Base Color Space</span>
+                  <span class="font-medium">{{ result.metadataOriginal.useBaseColorSpace ? 'Yes' : 'No' }}</span>
+                </div>
+              </div>
+            </div>
 
-        <div class="stat-item">
-          <div class="stat-label">
-            Size Change
+            <!-- Processed Metadata -->
+            <div v-if="result.metadataProcessed" class="space-y-3">
+              <div class="flex items-center gap-2 mb-2">
+                <UBadge color="primary" size="sm">After</UBadge>
+                <span class="text-xs text-gray-500 dark:text-gray-400">Processed Image</span>
+              </div>
+              <div class="space-y-2 text-sm">
+                <div class="flex justify-between py-1 border-b border-gray-100 dark:border-gray-800"
+                  :class="metadataChanged('maxContentBoost') ? 'bg-yellow-50 dark:bg-yellow-900/20' : ''">
+                  <span class="text-gray-600 dark:text-gray-400">Max Content Boost</span>
+                  <span class="font-medium">{{ formatMetadataValue(result.metadataProcessed.maxContentBoost) }}</span>
+                </div>
+                <div class="flex justify-between py-1 border-b border-gray-100 dark:border-gray-800"
+                  :class="metadataChanged('minContentBoost') ? 'bg-yellow-50 dark:bg-yellow-900/20' : ''">
+                  <span class="text-gray-600 dark:text-gray-400">Min Content Boost</span>
+                  <span class="font-medium">{{ formatMetadataValue(result.metadataProcessed.minContentBoost) }}</span>
+                </div>
+                <div class="flex justify-between py-1 border-b border-gray-100 dark:border-gray-800"
+                  :class="metadataChanged('gamma') ? 'bg-yellow-50 dark:bg-yellow-900/20' : ''">
+                  <span class="text-gray-600 dark:text-gray-400">Gamma</span>
+                  <span class="font-medium">{{ formatMetadataValue(result.metadataProcessed.gamma) }}</span>
+                </div>
+                <div class="flex justify-between py-1 border-b border-gray-100 dark:border-gray-800"
+                  :class="metadataChanged('hdrCapacityMin') ? 'bg-yellow-50 dark:bg-yellow-900/20' : ''">
+                  <span class="text-gray-600 dark:text-gray-400">HDR Capacity Min</span>
+                  <span class="font-medium">{{ result.metadataProcessed.hdrCapacityMin }}</span>
+                </div>
+                <div class="flex justify-between py-1 border-b border-gray-100 dark:border-gray-800"
+                  :class="metadataChanged('hdrCapacityMax') ? 'bg-yellow-50 dark:bg-yellow-900/20' : ''">
+                  <span class="text-gray-600 dark:text-gray-400">HDR Capacity Max</span>
+                  <span class="font-medium">{{ result.metadataProcessed.hdrCapacityMax }}</span>
+                </div>
+                <div class="flex justify-between py-1 border-b border-gray-100 dark:border-gray-800"
+                  :class="metadataChanged('offsetSdr') ? 'bg-yellow-50 dark:bg-yellow-900/20' : ''">
+                  <span class="text-gray-600 dark:text-gray-400">Offset SDR</span>
+                  <span class="font-medium font-mono text-xs">{{ formatOffsetValue(result.metadataProcessed.offsetSdr) }}</span>
+                </div>
+                <div class="flex justify-between py-1 border-b border-gray-100 dark:border-gray-800"
+                  :class="metadataChanged('offsetHdr') ? 'bg-yellow-50 dark:bg-yellow-900/20' : ''">
+                  <span class="text-gray-600 dark:text-gray-400">Offset HDR</span>
+                  <span class="font-medium font-mono text-xs">{{ formatOffsetValue(result.metadataProcessed.offsetHdr) }}</span>
+                </div>
+                <div class="flex justify-between py-1"
+                  :class="metadataChanged('useBaseColorSpace') ? 'bg-yellow-50 dark:bg-yellow-900/20' : ''">
+                  <span class="text-gray-600 dark:text-gray-400">Base Color Space</span>
+                  <span class="font-medium">{{ result.metadataProcessed.useBaseColorSpace ? 'Yes' : 'No' }}</span>
+                </div>
+              </div>
+            </div>
           </div>
-          <div class="stat-value"
-            :class="sizeReduction > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">
-            {{ sizeReduction > 0 ? '-' : '+' }}{{ formatBytes(Math.abs(sizeReduction)) }}
-            <span class="text-xs">
-              ({{ compressionRatio }}%)
-            </span>
+
+          <!-- Metadata Status -->
+          <div v-if="result.metadataOriginal && result.metadataProcessed" class="mt-4 p-3 rounded-lg"
+            :class="allMetadataMatches ? 'bg-green-50 dark:bg-green-900/20' : 'bg-yellow-50 dark:bg-yellow-900/20'">
+            <div class="flex items-center gap-2">
+              <UIcon :name="allMetadataMatches ? 'i-lucide-check-circle' : 'i-lucide-alert-triangle'"
+                :class="allMetadataMatches ? 'text-green-600 dark:text-green-400' : 'text-yellow-600 dark:text-yellow-400'" />
+              <span class="text-sm font-medium"
+                :class="allMetadataMatches ? 'text-green-700 dark:text-green-300' : 'text-yellow-700 dark:text-yellow-300'">
+                {{ allMetadataMatches ? 'Metadata preserved successfully' : 'Some metadata values have changed' }}
+              </span>
+            </div>
           </div>
         </div>
       </div>

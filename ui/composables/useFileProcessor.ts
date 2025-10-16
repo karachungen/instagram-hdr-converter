@@ -21,7 +21,7 @@ interface UseFileProcessorReturn {
 export function useFileProcessor(): UseFileProcessorReturn {
   const files = useState<ProcessingFile[]>('files', () => [])
   const isProcessing = ref(false)
-  const { add: addLog } = useLogs()
+  const logsStore = useLogsStore()
 
   /**
    * Generate a unique file ID
@@ -74,7 +74,7 @@ export function useFileProcessor(): UseFileProcessorReturn {
    */
   const addFiles = (fileList: FileList | File[]): void => {
     const fileArray = Array.from(fileList)
-    addLog(`Adding ${fileArray.length} file(s) to list...`, 'info')
+    logsStore.add(`Adding ${fileArray.length} file(s) to list...`, 'info')
     console.log('[DEBUG] addFiles called with:', fileArray.length, 'files')
     console.log('[DEBUG] Current files.value.length:', files.value.length)
 
@@ -107,7 +107,7 @@ export function useFileProcessor(): UseFileProcessorReturn {
             ? { ...f, data, status: 'ready' as const }
             : f,
         )
-        addLog(`  ✓ Loaded ${fileObj.name}: ${formatFileSize(data.length)}`, 'success')
+        logsStore.add(`  ✓ Loaded ${fileObj.name}: ${formatFileSize(data.length)}`, 'success')
       }).catch(() => {
         // Update by creating new array (triggers reactivity)
         files.value = files.value.map(f =>
@@ -115,11 +115,11 @@ export function useFileProcessor(): UseFileProcessorReturn {
             ? { ...f, status: 'error' as const, error: 'Failed to read file' }
             : f,
         )
-        addLog(`  ✗ Failed to load ${fileObj.name}`, 'error')
+        logsStore.add(`  ✗ Failed to load ${fileObj.name}`, 'error')
       })
     })
 
-    addLog(`Total files being added: ${fileArray.length}`, 'info')
+    logsStore.add(`Total files being added: ${fileArray.length}`, 'info')
   }
 
   /**
@@ -131,7 +131,7 @@ export function useFileProcessor(): UseFileProcessorReturn {
     if (index !== -1) {
       const fileObj = files.value[index]
       if (fileObj) {
-        addLog(`Removing file: ${fileObj.name}`, 'info')
+        logsStore.add(`Removing file: ${fileObj.name}`, 'info')
         files.value.splice(index, 1)
       }
     }
@@ -141,7 +141,7 @@ export function useFileProcessor(): UseFileProcessorReturn {
    * Clear all files from the queue
    */
   const clearFiles = (): void => {
-    addLog('Clearing all files...', 'info')
+    logsStore.add('Clearing all files...', 'info')
     files.value = []
   }
 
@@ -158,7 +158,7 @@ export function useFileProcessor(): UseFileProcessorReturn {
       throw new Error('File not loaded')
     }
 
-    addLog(`[${index + 1}/${total}] 📸 Processing: ${fileObj.name}`, 'info')
+    logsStore.add(`[${index + 1}/${total}] 📸 Processing: ${fileObj.name}`, 'info')
     fileObj.status = 'processing'
     fileObj.progress = 0
 
@@ -182,7 +182,7 @@ export function useFileProcessor(): UseFileProcessorReturn {
         fileObj.progress = 100
         fileObj.result = result
         fileObj.currentStep = undefined
-        addLog(`[${index + 1}/${total}] ✅ Completed: ${fileObj.name}`, 'success')
+        logsStore.add(`[${index + 1}/${total}] ✅ Completed: ${fileObj.name}`, 'success')
       }
       else {
         throw new Error(result.error || 'Processing failed')
@@ -199,17 +199,17 @@ export function useFileProcessor(): UseFileProcessorReturn {
    */
   const processAllFiles = async (wasmModule: WasmModule, toast: any): Promise<void> => {
     if (files.value.length === 0) {
-      addLog('No files selected', 'error')
+      logsStore.add('No files selected', 'error')
       return
     }
 
     if (!wasmModule?.FS) {
-      addLog('WASM filesystem not available', 'error')
+      logsStore.add('WASM filesystem not available', 'error')
       return
     }
 
-    addLog('=== Starting Batch Processing ===', 'info')
-    addLog(`Processing ${files.value.length} file(s)...`, 'info')
+    logsStore.add('=== Starting Batch Processing ===', 'info')
+    logsStore.add(`Processing ${files.value.length} file(s)...`, 'info')
 
     isProcessing.value = true
     let successCount = 0
@@ -223,7 +223,7 @@ export function useFileProcessor(): UseFileProcessorReturn {
       }
 
       if (!fileObj.data) {
-        addLog(`Skipping ${fileObj.name}: not loaded`, 'error')
+        logsStore.add(`Skipping ${fileObj.name}: not loaded`, 'error')
         fileObj.status = 'error'
         fileObj.error = 'File not loaded'
         errorCount++
@@ -236,18 +236,18 @@ export function useFileProcessor(): UseFileProcessorReturn {
       }
       catch (error) {
         const err = error as Error
-        addLog(`  ✗ Error processing ${fileObj.name}: ${err.message}`, 'error')
+        logsStore.add(`  ✗ Error processing ${fileObj.name}: ${err.message}`, 'error')
         fileObj.status = 'error'
         fileObj.error = err.message
         errorCount++
       }
     }
 
-    addLog('=== Batch Processing Complete ===', 'success')
-    addLog(`✓ Success: ${successCount} file(s)`, 'success')
+    logsStore.add('=== Batch Processing Complete ===', 'success')
+    logsStore.add(`✓ Success: ${successCount} file(s)`, 'success')
 
     if (errorCount > 0) {
-      addLog(`✗ Errors: ${errorCount} file(s)`, 'error')
+      logsStore.add(`✗ Errors: ${errorCount} file(s)`, 'error')
     }
 
     toast.add({

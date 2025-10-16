@@ -117,9 +117,9 @@ const logStats = computed(() => {
 </script>
 
 <template>
-  <div class="processing-logs">
+  <div class="processing-logs h-full flex flex-col">
     <!-- Header -->
-    <div class="flex items-center justify-between mb-3">
+    <div class="flex items-center justify-between mb-3 flex-shrink-0">
       <div class="flex items-center gap-2">
         <h2 class="text-lg font-semibold flex items-center">
           <UIcon name="i-lucide-terminal" class="mr-2" />
@@ -165,7 +165,7 @@ const logStats = computed(() => {
     <!-- Logs Container -->
     <div
       ref="logsContainer"
-      class="logs-container bg-gray-900 rounded-lg p-4 font-mono text-sm max-h-96 overflow-y-auto"
+      class="logs-container flex-1 bg-gray-900 rounded-lg p-4 font-mono text-sm overflow-y-auto"
       @scroll="handleScroll"
     >
       <!-- Empty State -->
