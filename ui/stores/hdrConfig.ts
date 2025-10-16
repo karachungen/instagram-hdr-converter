@@ -12,8 +12,10 @@ export interface CustomHdrConfig {
   useBaseColorSpace: number
 }
 
+export type ConfigMode = 'instagram' | 'auto' | 'custom'
+
 export const useHdrConfigStore = defineStore('hdrConfig', () => {
-  const useCustomConfig = ref(false)
+  const configMode = ref<ConfigMode>('instagram')
 
   const customConfig = ref<CustomHdrConfig>({
     maxContentBoost: 16,
@@ -37,10 +39,11 @@ export const useHdrConfigStore = defineStore('hdrConfig', () => {
       hdrCapacityMax: 16.5665,
       useBaseColorSpace: 1,
     }
+    configMode.value = 'instagram'
   }
 
   return {
-    useCustomConfig,
+    configMode,
     customConfig,
     resetToDefaults,
   }

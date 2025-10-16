@@ -153,6 +153,61 @@ export function useHdrProcessor() {
   }
 
   /**
+   * Adjust HDR metadata for Instagram compatibility
+   * Instagram requires hdrCapacityMin >= 1
+   * This function proportionally adjusts all parameters to maintain visual appearance
+   */
+  function adjustForInstagram(metadata: HdrMetadata): HdrMetadata {
+    const logsStore = useLogsStore()
+
+    // Get numeric values (handle arrays by averaging)
+    const getNumericValue = (val: number | number[]): number => {
+      return Array.isArray(val) ? val.reduce((a, b) => a + b, 0) / val.length : val
+    }
+
+    const currentMinCapacity = metadata.hdrCapacityMin
+    const currentMaxCapacity = metadata.hdrCapacityMax
+
+    // If already >= 1, no adjustment needed
+    if (currentMinCapacity >= 1) {
+      logsStore.add('[Instagram Mode] hdrCapacityMin already >= 1, no adjustment needed', 'info')
+      return metadata
+    }
+
+    logsStore.add(`[Instagram Mode] Adjusting metadata (original hdrCapacityMin: ${currentMinCapacity})`, 'info')
+
+    // Adjust maxContentBoost and minContentBoost proportionally
+    const maxBoost = getNumericValue(metadata.maxContentBoost)
+    const minBoost = getNumericValue(metadata.minContentBoost)
+    const gamma = getNumericValue(metadata.gamma)
+
+    // Recalculate content boosts to maintain visual range
+    // The content boost range should be scaled by the inverse of capacity change
+    const targetMinCapacity = 1.0
+    const boostScaleFactor = currentMinCapacity / targetMinCapacity
+
+    const adjustedMaxBoost = maxBoost * boostScaleFactor
+    const adjustedMinBoost = minBoost * boostScaleFactor
+
+    const adjusted: HdrMetadata = {
+      maxContentBoost: adjustedMaxBoost,
+      minContentBoost: adjustedMinBoost,
+      gamma, // Keep gamma the same or adjust slightly
+      offsetSdr: metadata.offsetSdr,
+      offsetHdr: metadata.offsetHdr,
+      hdrCapacityMin: targetMinCapacity,
+      hdrCapacityMax: currentMaxCapacity, // Keep max the same
+      useBaseColorSpace: metadata.useBaseColorSpace,
+    }
+
+    logsStore.add(`[Instagram Mode] Adjusted: hdrCapacityMin ${currentMinCapacity} → ${adjusted.hdrCapacityMin}`, 'success')
+    logsStore.add(`[Instagram Mode] Adjusted: maxContentBoost ${maxBoost.toFixed(4)} → ${adjustedMaxBoost.toFixed(4)}`, 'info')
+    logsStore.add(`[Instagram Mode] Adjusted: minContentBoost ${minBoost.toFixed(4)} → ${adjustedMinBoost.toFixed(4)}`, 'info')
+
+    return adjusted
+  }
+
+  /**
    * Create blob URL from RGBA8888 data for display
    * Currently unused - keeping for potential future use
    */
@@ -598,20 +653,32 @@ export function useHdrProcessor() {
       console.log('[FS] Wrote gain map JPEG to FS:', gainMapPath, 'size:', gainMapJpeg.length)
       logsStore.add(`[HDR Encode] Gain Map JPEG: ${gainMapJpeg.length} bytes`, 'info')
 
-      // Check if custom config should be used
+      // Determine metadata based on config mode
       const hdrConfigStore = useHdrConfigStore()
       let metadataToUse = metadata
 
-      if (hdrConfigStore.useCustomConfig) {
+      if (hdrConfigStore.configMode === 'custom') {
         logsStore.add('[HDR Config] Using custom HDR configuration', 'info')
         metadataToUse = hdrConfigStore.customConfig
       }
-      else if (metadata) {
-        logsStore.add('[HDR Config] Using extracted metadata from original image', 'info')
+      else if (hdrConfigStore.configMode === 'instagram') {
+        if (metadata) {
+          logsStore.add('[HDR Config] Using Instagram-compatible mode (extracted metadata + adjustments)', 'info')
+          metadataToUse = adjustForInstagram(metadata)
+        }
+        else {
+          logsStore.add('[HDR Config] No metadata available, using Instagram-compatible defaults', 'info')
+          metadataToUse = hdrConfigStore.customConfig
+        }
       }
-      else {
-        logsStore.add('[HDR Config] No metadata available, using defaults', 'info')
-        metadataToUse = hdrConfigStore.customConfig
+      else { // auto mode
+        if (metadata) {
+          logsStore.add('[HDR Config] Using extracted metadata from original image (auto mode)', 'info')
+        }
+        else {
+          logsStore.add('[HDR Config] No metadata available, using defaults', 'info')
+          metadataToUse = hdrConfigStore.customConfig
+        }
       }
 
       // Normalize metadata if needed (check for multichannel values)

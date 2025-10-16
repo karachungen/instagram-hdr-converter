@@ -1,18 +1,32 @@
 <script setup lang="ts">
+import type { ConfigMode } from '~/stores/hdrConfig'
 import { useHdrConfigStore } from '~/stores/hdrConfig'
 
 const hdrConfigStore = useHdrConfigStore()
 const toast = useToast()
 
 const configModeItems = [
-  { value: 'auto', label: 'Auto', description: 'Use extracted metadata' },
-  { value: 'custom', label: 'Custom', description: 'Manual configuration' },
+  {
+    value: 'instagram',
+    label: 'Instagram',
+    description: 'Auto + Instagram compatible (hdrCapacityMin >= 1)',
+  },
+  {
+    value: 'auto',
+    label: 'Auto',
+    description: 'Use extracted metadata as-is',
+  },
+  {
+    value: 'custom',
+    label: 'Custom',
+    description: 'Manual configuration',
+  },
 ]
 
 const configMode = computed({
-  get: () => hdrConfigStore.useCustomConfig ? 'custom' : 'auto',
+  get: () => hdrConfigStore.configMode,
   set: (value: string) => {
-    hdrConfigStore.useCustomConfig = value === 'custom'
+    hdrConfigStore.configMode = value as ConfigMode
   },
 })
 
@@ -20,7 +34,7 @@ function handleReset() {
   hdrConfigStore.resetToDefaults()
   toast.add({
     title: 'Reset to defaults',
-    description: 'HDR configuration reset to default values',
+    description: 'HDR configuration reset to default values (Instagram mode)',
     color: 'primary',
   })
 }
@@ -41,11 +55,11 @@ function handleReset() {
       <URadioGroup
         v-model="configMode"
         :items="configModeItems"
-        orientation="horizontal"
+        orientation="vertical"
         variant="card"
       />
 
-      <UForm v-if="hdrConfigStore.useCustomConfig" :state="hdrConfigStore.customConfig" class="space-y-4">
+      <UForm v-if="hdrConfigStore.configMode === 'custom'" :state="hdrConfigStore.customConfig" class="space-y-4">
         <div class="grid grid-cols-2 gap-4">
           <UFormField label="Max Content Boost" name="maxContentBoost">
             <UInput
@@ -128,7 +142,15 @@ function handleReset() {
       </UForm>
 
       <div v-else class="text-sm text-gray-600 dark:text-gray-400">
-        Using metadata extracted from the original image. Enable custom configuration to override.
+        <template v-if="hdrConfigStore.configMode === 'instagram'">
+          <div class="flex items-center gap-2">
+            <UIcon name="i-lucide-instagram" class="text-pink-500" />
+            <span>Using extracted metadata with Instagram compatibility adjustments (hdrCapacityMin >= 1)</span>
+          </div>
+        </template>
+        <template v-else>
+          Using metadata extracted from the original image as-is.
+        </template>
       </div>
     </div>
   </UCard>
