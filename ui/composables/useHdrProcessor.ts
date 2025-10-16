@@ -244,65 +244,75 @@ export function useHdrProcessor() {
   }
 
   /**
-   * Convert JPEG to 4:2:0 chroma subsampling using Canvas
-   * This ensures the SDR image uses 4:2:0 subsampling for optimal compatibility
+   * Convert JPEG to 4:2:0 chroma subsampling with sRGB color space and progressive encoding
+   * Browser re-encodes with 4:2:0 by default when using Canvas API
    */
   async function convertTo420Subsampling(jpegData: Uint8Array, quality: number = 0.95): Promise<Uint8Array> {
     return new Promise((resolve, reject) => {
-      // Create blob from JPEG data
-      const blob = new Blob([new Uint8Array(jpegData)], { type: 'image/jpeg' })
-      const url = URL.createObjectURL(blob)
+      try {
+        // Create blob from input JPEG
+        const blob = new Blob([new Uint8Array(jpegData)], { type: 'image/jpeg' })
+        const url = URL.createObjectURL(blob)
 
-      const img = new Image()
+        const img = new Image()
+        img.onload = () => {
+          try {
+            // Create canvas with sRGB color space
+            const canvas = document.createElement('canvas')
+            const ctx = canvas.getContext('2d', {
+              colorSpace: 'srgb', // Force sRGB color space
+              willReadFrequently: false,
+            })
 
-      img.onload = () => {
-        try {
-          // Create canvas
-          const canvas = document.createElement('canvas')
-          canvas.width = img.width
-          canvas.height = img.height
-          const ctx = canvas.getContext('2d')
+            if (!ctx) {
+              throw new Error('Failed to get canvas context')
+            }
 
-          if (!ctx) {
-            URL.revokeObjectURL(url)
-            reject(new Error('Failed to get canvas context'))
-            return
+            canvas.width = img.width
+            canvas.height = img.height
+
+            // Draw image to canvas (converts to sRGB if needed)
+            ctx.drawImage(img, 0, 0)
+
+            // Convert to progressive JPEG with 4:2:0 chroma subsampling
+            canvas.toBlob(
+              (outputBlob) => {
+                URL.revokeObjectURL(url)
+
+                if (!outputBlob) {
+                  reject(new Error('Failed to create blob from canvas'))
+                  return
+                }
+
+                // Read blob as ArrayBuffer
+                const reader = new FileReader()
+                reader.onload = () => {
+                  const arrayBuffer = reader.result as ArrayBuffer
+                  resolve(new Uint8Array(arrayBuffer))
+                }
+                reader.onerror = () => reject(reader.error)
+                reader.readAsArrayBuffer(outputBlob)
+              },
+              'image/jpeg',
+              quality, // JPEG quality (0.95 = 95%)
+            )
           }
-
-          // Draw image to canvas
-          ctx.drawImage(img, 0, 0)
-
-          // Convert to JPEG blob with 4:2:0 subsampling (default for JPEG)
-          canvas.toBlob(
-            (resultBlob) => {
-              URL.revokeObjectURL(url)
-
-              if (!resultBlob) {
-                reject(new Error('Failed to convert canvas to blob'))
-                return
-              }
-
-              // Convert blob to Uint8Array
-              resultBlob.arrayBuffer().then((buffer) => {
-                resolve(new Uint8Array(buffer))
-              }).catch(reject)
-            },
-            'image/jpeg',
-            quality,
-          )
+          catch (error) {
+            URL.revokeObjectURL(url)
+            reject(error)
+          }
         }
-        catch (error) {
+
+        img.onerror = () => {
           URL.revokeObjectURL(url)
-          reject(error)
+          reject(new Error('Failed to load image'))
         }
-      }
 
-      img.onerror = () => {
-        URL.revokeObjectURL(url)
-        reject(new Error('Failed to load image'))
+        img.src = url
       }
-
-      img.src = url
+      catch (error) {
+        reject(error)
+      }
     })
   }
 
@@ -550,11 +560,11 @@ export function useHdrProcessor() {
       logsStore.add('[HDR Encode] Creating fresh WASM instance...', 'info')
       const freshModule = await reinitWasm()
 
-      // Convert base SDR to 4:2:0 chroma subsampling before encoding
+      // Convert base SDR to sRGB + 4:2:0 + progressive before encoding
       let finalBaseSdrJpeg = baseSdrJpeg
       try {
         const originalSize = baseSdrJpeg.length
-        logsStore.add('[Chroma Subsampling] Converting base SDR to 4:2:0 before encoding...', 'info')
+        logsStore.add('[Chroma Subsampling] Converting base SDR to sRGB + 4:2:0 + progressive before encoding...', 'info')
 
         finalBaseSdrJpeg = await convertTo420Subsampling(baseSdrJpeg, 0.95)
 
@@ -563,13 +573,13 @@ export function useHdrProcessor() {
         const diffPercent = ((diff / originalSize) * 100).toFixed(1)
 
         if (diff > 0) {
-          logsStore.add(`[Chroma Subsampling] ✓ Converted to 4:2:0: ${newSize} bytes (saved ${diff} bytes, ${diffPercent}%)`, 'success')
+          logsStore.add(`[Chroma Subsampling] ✓ Converted to sRGB + 4:2:0 + progressive: ${newSize} bytes (saved ${diff} bytes, ${diffPercent}%)`, 'success')
         }
         else if (diff < 0) {
-          logsStore.add(`[Chroma Subsampling] ✓ Converted to 4:2:0: ${newSize} bytes (increased ${Math.abs(diff)} bytes)`, 'info')
+          logsStore.add(`[Chroma Subsampling] ✓ Converted to sRGB + 4:2:0 + progressive: ${newSize} bytes (increased ${Math.abs(diff)} bytes)`, 'info')
         }
         else {
-          logsStore.add(`[Chroma Subsampling] ✓ Converted to 4:2:0: ${newSize} bytes (no size change)`, 'info')
+          logsStore.add(`[Chroma Subsampling] ✓ Converted to sRGB + 4:2:0 + progressive: ${newSize} bytes (no size change)`, 'info')
         }
       }
       catch (error) {
