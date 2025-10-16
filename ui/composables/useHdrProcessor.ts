@@ -243,6 +243,69 @@ export function useHdrProcessor() {
   }
 
   /**
+   * Convert JPEG to 4:2:0 chroma subsampling using Canvas
+   * This ensures the SDR image uses 4:2:0 subsampling for optimal compatibility
+   */
+  async function convertTo420Subsampling(jpegData: Uint8Array, quality: number = 0.95): Promise<Uint8Array> {
+    return new Promise((resolve, reject) => {
+      // Create blob from JPEG data
+      const blob = new Blob([new Uint8Array(jpegData)], { type: 'image/jpeg' })
+      const url = URL.createObjectURL(blob)
+
+      const img = new Image()
+
+      img.onload = () => {
+        try {
+          // Create canvas
+          const canvas = document.createElement('canvas')
+          canvas.width = img.width
+          canvas.height = img.height
+          const ctx = canvas.getContext('2d')
+
+          if (!ctx) {
+            URL.revokeObjectURL(url)
+            reject(new Error('Failed to get canvas context'))
+            return
+          }
+
+          // Draw image to canvas
+          ctx.drawImage(img, 0, 0)
+
+          // Convert to JPEG blob with 4:2:0 subsampling (default for JPEG)
+          canvas.toBlob(
+            (resultBlob) => {
+              URL.revokeObjectURL(url)
+
+              if (!resultBlob) {
+                reject(new Error('Failed to convert canvas to blob'))
+                return
+              }
+
+              // Convert blob to Uint8Array
+              resultBlob.arrayBuffer().then((buffer) => {
+                resolve(new Uint8Array(buffer))
+              }).catch(reject)
+            },
+            'image/jpeg',
+            quality,
+          )
+        }
+        catch (error) {
+          URL.revokeObjectURL(url)
+          reject(error)
+        }
+      }
+
+      img.onerror = () => {
+        URL.revokeObjectURL(url)
+        reject(new Error('Failed to load image'))
+      }
+
+      img.src = url
+    })
+  }
+
+  /**
    * Step 1: Extract components from UltraHDR JPEG and metadata
    *
    * NEW APPROACH - API-4 (Compressed SDR + Gain Map):
@@ -322,7 +385,7 @@ export function useHdrProcessor() {
         return { baseSdrJpeg: null, gainMapJpeg, metadata: null }
       }
 
-      logsStore.add(`[Base SDR] ✓ Base SDR extracted: ${baseSdrJpeg.length} bytes`, 'success')
+      logsStore.add(`[Base SDR] ✓ Extracted base SDR: ${baseSdrJpeg.length} bytes`, 'success')
 
       // Step 3: Extract metadata using WASM mode 1
       logsStore.add('[Metadata] Step 3/3: Extracting gain map metadata...', 'info')
@@ -486,10 +549,38 @@ export function useHdrProcessor() {
       logsStore.add('[HDR Encode] Creating fresh WASM instance...', 'info')
       const freshModule = await reinitWasm()
 
+      // Convert base SDR to 4:2:0 chroma subsampling before encoding
+      let finalBaseSdrJpeg = baseSdrJpeg
+      try {
+        const originalSize = baseSdrJpeg.length
+        logsStore.add('[Chroma Subsampling] Converting base SDR to 4:2:0 before encoding...', 'info')
+
+        finalBaseSdrJpeg = await convertTo420Subsampling(baseSdrJpeg, 0.95)
+
+        const newSize = finalBaseSdrJpeg.length
+        const diff = originalSize - newSize
+        const diffPercent = ((diff / originalSize) * 100).toFixed(1)
+
+        if (diff > 0) {
+          logsStore.add(`[Chroma Subsampling] ✓ Converted to 4:2:0: ${newSize} bytes (saved ${diff} bytes, ${diffPercent}%)`, 'success')
+        }
+        else if (diff < 0) {
+          logsStore.add(`[Chroma Subsampling] ✓ Converted to 4:2:0: ${newSize} bytes (increased ${Math.abs(diff)} bytes)`, 'info')
+        }
+        else {
+          logsStore.add(`[Chroma Subsampling] ✓ Converted to 4:2:0: ${newSize} bytes (no size change)`, 'info')
+        }
+      }
+      catch (error) {
+        logsStore.add(`[Chroma Subsampling] ⚠ Failed to convert: ${error}`, 'warning')
+        logsStore.add('[Chroma Subsampling] Using original base SDR for encoding', 'info')
+        // Continue with original if conversion fails
+      }
+
       // Write Base SDR JPEG to FS
-      freshModule.FS.writeFile(baseSdrPath, baseSdrJpeg)
-      console.log('[FS] Wrote base SDR JPEG to FS:', baseSdrPath, 'size:', baseSdrJpeg.length)
-      logsStore.add(`[HDR Encode] Base SDR JPEG: ${baseSdrJpeg.length} bytes`, 'info')
+      freshModule.FS.writeFile(baseSdrPath, finalBaseSdrJpeg)
+      console.log('[FS] Wrote base SDR JPEG to FS:', baseSdrPath, 'size:', finalBaseSdrJpeg.length)
+      logsStore.add(`[HDR Encode] Base SDR JPEG: ${finalBaseSdrJpeg.length} bytes`, 'info')
 
       // Write Gain Map JPEG to FS
       freshModule.FS.writeFile(gainMapPath, gainMapJpeg)
