@@ -144,6 +144,9 @@ onUnmounted(() => {
 
           <!-- Actions Section -->
           <ActionsBar @process="handleProcess" />
+
+          <!-- HDR Configuration Section -->
+          <HdrConfigEditor />
         </div>
       </aside>
 

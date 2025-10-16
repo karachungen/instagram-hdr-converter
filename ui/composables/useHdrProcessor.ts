@@ -4,6 +4,7 @@
  */
 
 import type { HdrMetadata, HdrProcessResult, WasmModule } from '~/types'
+import { useHdrConfigStore } from '~/stores/hdrConfig'
 import { removeXmpMetadata } from '~/utils/jpegMetadataCleaner'
 import { extractBaseSdrJpeg, extractGainMapJpeg } from '~/utils/jpegParser'
 
@@ -587,20 +588,36 @@ export function useHdrProcessor() {
       console.log('[FS] Wrote gain map JPEG to FS:', gainMapPath, 'size:', gainMapJpeg.length)
       logsStore.add(`[HDR Encode] Gain Map JPEG: ${gainMapJpeg.length} bytes`, 'info')
 
+      // Check if custom config should be used
+      const hdrConfigStore = useHdrConfigStore()
+      let metadataToUse = metadata
+
+      if (hdrConfigStore.useCustomConfig) {
+        logsStore.add('[HDR Config] Using custom HDR configuration', 'info')
+        metadataToUse = hdrConfigStore.customConfig
+      }
+      else if (metadata) {
+        logsStore.add('[HDR Config] Using extracted metadata from original image', 'info')
+      }
+      else {
+        logsStore.add('[HDR Config] No metadata available, using defaults', 'info')
+        metadataToUse = hdrConfigStore.customConfig
+      }
+
       // Normalize metadata if needed (check for multichannel values)
-      let normalizedMetadata = metadata
-      if (metadata) {
+      let normalizedMetadata = metadataToUse
+      if (metadataToUse) {
         const hasMultichannel
-          = Array.isArray(metadata.maxContentBoost)
-            || Array.isArray(metadata.minContentBoost)
-            || Array.isArray(metadata.gamma)
-            || Array.isArray(metadata.offsetSdr)
-            || Array.isArray(metadata.offsetHdr)
+          = Array.isArray(metadataToUse.maxContentBoost)
+            || Array.isArray(metadataToUse.minContentBoost)
+            || Array.isArray(metadataToUse.gamma)
+            || Array.isArray(metadataToUse.offsetSdr)
+            || Array.isArray(metadataToUse.offsetHdr)
 
         if (hasMultichannel) {
           logsStore.add('[Metadata] ⚠ Multichannel metadata detected - converting to single-channel', 'warning')
           logsStore.add('[Metadata] Averaging per-channel values (libultrahdr XMP limitation)', 'info')
-          normalizedMetadata = normalizeMetadata(metadata)
+          normalizedMetadata = normalizeMetadata(metadataToUse)
         }
       }
 
