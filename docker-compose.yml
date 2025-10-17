@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  # Web UI service
+  ui:
+    build: ./ui
+    image: karachungen/hdr-converter-ui:latest
+    container_name: hdr-converter-ui
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # CLI service (for batch processing)
+  # Usage: docker-compose run --rm cli input.jpg output.jpg
+  cli:
+    build: .
+    image: karachungen/hdr-converter-cli:latest
+    volumes:
+      - ./data:/data
+    working_dir: /data
+    profiles:
+      - cli
+

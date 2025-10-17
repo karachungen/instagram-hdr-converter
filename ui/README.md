@@ -1,303 +1,156 @@
-# Instagram HDR Converter
+# Instagram HDR Converter - Web UI
 
-Modern Nuxt.js application for converting HDR images using Google's libultrahdr WebAssembly module.
+A modern web-based interface for converting HDR images using Google's libultrahdr compiled to WebAssembly.
 
 ## Features
 
-- 🎨 **HDR Image Processing** - Two-step conversion (decode → encode) using libultrahdr WASM
-- 🔄 **Before/After Comparison** - Interactive slider to compare original vs processed images
-- 📊 **Real-time Progress** - Step-by-step indicators (decoding, encoding) with progress bars
-- 📁 **Batch Processing** - Process multiple images simultaneously
-- 💾 **Client-side Processing** - Private and secure, images never leave your device
-- ⚡ **Built with Nuxt 4** - Vue 3, TypeScript, modern tooling
-- 🎨 **Beautiful UI** - Nuxt UI components, smooth animations
-- 🌗 **Dark Mode** - Full dark mode support
-- 📱 **Responsive Design** - Works on all devices
-- ⌨️ **Keyboard Shortcuts** - ⌘P to process, ⌘L for logs
-- ♿ **Accessible** - WCAG compliant
+- 🎨 Drag & drop file upload
+- ⚡ Real-time HDR conversion in browser (WebAssembly)
+- 🔄 Before/After image comparison
+- 📦 Batch processing support
+- 💾 Download individual or all converted files
+- 🔒 Privacy-first: All processing happens client-side
+- 🗜️ GZIP & Brotli compression enabled
 
 ## Quick Start
 
-### Prerequisites
+### Option 1: Using Docker (Recommended)
 
-- Node.js >= 18.0.0
-- pnpm >= 9.0.0
-
-### Installation
+Pull and run the pre-built image from Docker Hub:
 
 ```bash
-# Install pnpm globally
-npm install -g pnpm
+docker pull karachungen/hdr-converter-ui:latest
+docker run -p 3000:3000 karachungen/hdr-converter-ui
+```
 
-# Install dependencies
+Then open: http://localhost:3000
+
+### Option 2: Build with Docker
+
+Build the image locally (includes WASM compilation):
+
+```bash
+cd ui
+docker build -t hdr-converter-ui .
+docker run -p 3000:3000 hdr-converter-ui
+```
+
+**Note:** The Docker build includes compiling libultrahdr to WebAssembly using Emscripten, which may take 5-10 minutes depending on your system.
+
+### Option 3: Local Development
+
+#### Prerequisites
+
+- Node.js 20.x or later
+- pnpm 9.x or later
+- Emscripten SDK (for WASM building)
+
+#### Setup
+
+1. **Build WASM files:**
+
+```bash
+# Install Emscripten if not already installed
+# See: https://emscripten.org/docs/getting_started/downloads.html
+
+# Build WASM
+./build-wasm.sh
+
+# This will create:
+# - public/ultrahdr_app.js
+# - public/ultrahdr_app.wasm
+```
+
+2. **Install dependencies:**
+
+```bash
 pnpm install
+```
 
-# Build WASM files (first time only)
-./build-wasm-docker.sh
+3. **Run development server:**
 
-# Run development server
+```bash
 pnpm dev
 ```
+
+Open http://localhost:3001
+
+4. **Build for production:**
+
+```bash
+pnpm generate
+```
+
+Static files will be in `.output/public/`
+
+## Docker Build Process
+
+The Dockerfile uses a multi-stage build:
+
+1. **Stage 1: WASM Builder**
+   - Uses `emscripten/emsdk:3.1.51`
+   - Clones and compiles libultrahdr to WebAssembly
+   - Outputs: `ultrahdr_app.js` and `ultrahdr_app.wasm`
+
+2. **Stage 2: Nuxt Builder**
+   - Uses `node:20-slim`
+   - Installs dependencies with pnpm
+   - Copies WASM files from Stage 1
+   - Generates static Nuxt site
+
+3. **Stage 3: Production Server**
+   - Uses `node:20-slim`
+   - Installs `http-server`
+   - Serves static files with GZIP and Brotli compression
+   - Exposes port 3000
 
 ## Project Structure
 
 ```
 ui/
-├── public/
-│   ├── ultrahdr_app.js      # WASM loader (generated)
-│   └── ultrahdr_app.wasm    # WASM binary (generated)
-├── assets/css/              # Global styles
-├── components/              # Vue components
-│   ├── ActionsBar.vue       # Process & logs buttons
-│   ├── ComparisonSection.vue # Before/after results
-│   ├── ErrorBoundary.vue    # Error handling
-│   ├── FileItem.vue         # File list item
-│   ├── FileListSection.vue  # Files list container
-│   ├── FileUploadSection.vue # Upload dropzone
-│   ├── ImageComparison.vue  # Image slider comparison
-│   ├── LoadingState.vue     # Loading indicator
-│   ├── PageFooter.vue       # Privacy info
-│   ├── PageHeader.vue       # App title & status
-│   ├── ProcessingLogs.vue   # Log viewer
-│   └── StatsBar.vue         # Statistics cards
-├── composables/             # Vue composables
-│   ├── useFileProcessor.ts  # File processing
-│   ├── useHdrProcessor.ts   # HDR conversion service
-│   ├── useKeyboardShortcuts.ts
-│   ├── useLogs.ts
-│   └── useWasm.ts
-├── pages/
-│   └── index.vue           # Main page (clean, 300 lines)
-├── types/
-│   └── index.ts            # TypeScript types
-└── utils/                  # Utility functions
+├── Dockerfile              # Multi-stage Docker build
+├── build-wasm.sh          # Local WASM build script
+├── components/            # Vue components
+├── composables/           # Vue composables
+├── pages/                 # Nuxt pages
+├── stores/                # Pinia stores
+├── types/                 # TypeScript types
+├── utils/                 # Utility functions
+├── public/                # Static assets (WASM files go here)
+└── wasm-files/            # Pre-built WASM (for reference/backup)
 ```
 
-## Building WASM Module
+## Environment Variables
 
-The WASM module must be built before running the app.
+- `NODE_ENV` - Set to `production` for optimized builds
+- `NUXT_TYPESCRIPT_TYPECHECK` - Enable/disable TypeScript type checking
 
-### Option 1: Docker (Recommended)
+## Scripts
 
-```bash
-./build-wasm-docker.sh
-```
+- `pnpm dev` - Start development server
+- `pnpm build` - Build for production
+- `pnpm generate` - Generate static site
+- `pnpm preview` - Preview production build
+- `pnpm lint` - Lint code
+- `pnpm typecheck` - Run TypeScript type checking
 
-Automatically builds and copies WASM files to `public/` directory.
+## Technology Stack
 
-### Option 2: Local Build (Requires Emscripten)
+- **Framework:** Nuxt 4.1.3
+- **UI Library:** Nuxt UI
+- **State Management:** Pinia
+- **Language:** TypeScript
+- **Package Manager:** pnpm
+- **WebAssembly:** Emscripten + libultrahdr
+- **Server:** http-server (with compression)
 
-```bash
-./build-wasm.sh
-```
+## Performance
 
-Requires Emscripten SDK installed locally.
-
-### Verify WASM Files
-
-```bash
-ls -lh public/ultrahdr_app.*
-# Should show:
-# public/ultrahdr_app.js    (~77KB)
-# public/ultrahdr_app.wasm  (~582KB)
-```
-
-## Available Commands
-
-```bash
-# Development
-pnpm dev              # Start dev server
-pnpm build            # Build for production
-pnpm preview          # Preview production build
-
-# Code Quality
-pnpm lint             # Lint code
-pnpm lint:fix         # Lint and auto-fix
-pnpm typecheck        # TypeScript type checking
-
-# Utilities
-pnpm clean            # Clean build artifacts
-pnpm analyze          # Analyze bundle size
-```
-
-## How It Works
-
-1. **Upload** - Drop or select HDR images (AVIF, HEIF, JPG)
-2. **Process** - Click "Process All Images" or press ⌘P
-3. **Watch Progress** - See real-time decoding and encoding steps
-4. **Compare** - Use interactive slider to compare before/after images
-5. **Review Stats** - Check file sizes, dimensions, and compression ratios
-
-### Processing Pipeline
-
-```
-Input Image (HDR)
-    ↓
-Step 1: Decode HDR → RAW
-    ↓
-Step 2: Encode RAW → HDR (with proper dimensions)
-    ↓
-Output: Optimized HDR Image + Comparison View
-```
-
-## Keyboard Shortcuts
-
-| Shortcut | Action |
-|----------|--------|
-| `⌘P` / `Ctrl+P` | Process all images |
-| `⌘L` / `Ctrl+L` | Toggle logs |
-
-## Configuration
-
-### Package Manager: pnpm
-
-This project uses pnpm for better performance and disk efficiency.
-
-```bash
-# Install pnpm
-npm install -g pnpm
-
-# Basic commands
-pnpm install          # Install dependencies
-pnpm add <pkg>        # Add package
-pnpm remove <pkg>     # Remove package
-pnpm update           # Update packages
-```
-
-### Linting: ESLint
-
-Using [@antfu/eslint-config](https://github.com/antfu/eslint-config) with auto-fix on save.
-
-```bash
-pnpm lint             # Check code
-pnpm lint:fix         # Fix issues
-```
-
-### TypeScript
-
-Strict mode enabled with full type safety.
-
-```bash
-pnpm typecheck        # Check types
-```
-
-## Troubleshooting
-
-### WASM Module Not Loading
-
-1. **Check files exist:**
-   ```bash
-   ls -la public/ultrahdr_app.*
-   ```
-
-2. **Rebuild WASM:**
-   ```bash
-   ./build-wasm-docker.sh
-   ```
-
-3. **Restart dev server:**
-   ```bash
-   pnpm dev
-   ```
-
-### TypeScript Errors
-
-```bash
-# Regenerate types
-pnpm postinstall
-
-# Check errors
-pnpm typecheck
-```
-
-### Build Errors
-
-```bash
-# Clean and rebuild
-pnpm clean
-rm -rf node_modules pnpm-lock.yaml
-pnpm install
-pnpm build
-```
-
-### Error: 404 /ultrahdr_app.js
-
-**Cause:** WASM files not in `public/` directory.
-
-**Fix:**
-```bash
-./build-wasm-docker.sh
-pnpm dev
-```
-
-### WASM Module Load Timeout
-
-The app waits up to 6 seconds for the WASM module to load. If it fails:
-
-1. Check browser console for errors
-2. Verify files in `public/` directory
-3. Check network tab for 404 errors
-4. Rebuild WASM files
-
-## Browser Support
-
-- Chrome (latest)
-- Firefox (latest)
-- Safari (latest)
-- Edge (latest)
-
-WebAssembly support required.
-
-## Development Workflow
-
-1. **First time:**
-   ```bash
-   pnpm install
-   ./build-wasm-docker.sh
-   pnpm dev
-   ```
-
-2. **Regular development:**
-   ```bash
-   pnpm dev
-   ```
-
-3. **After pulling changes:**
-   ```bash
-   pnpm install
-   # Rebuild WASM only if source changed
-   ./build-wasm-docker.sh
-   pnpm dev
-   ```
-
-4. **Production build:**
-   ```bash
-   ./build-wasm-docker.sh
-   pnpm build
-   pnpm preview
-   ```
-
-## Key Technologies
-
-- **Nuxt 4.1.3** - Vue framework
-- **Vue 3.5.22** - Progressive JavaScript framework
-- **TypeScript 5.7.2** - Type safety
-- **Nuxt UI 4.0.0** - Component library
-- **Tailwind CSS** - Utility-first CSS
-- **pnpm 9.15.0** - Package manager
-- **ESLint** - Code linting with @antfu/eslint-config
-- **libultrahdr** - Google's HDR library (WASM)
-
-## Version
-
-Current version: **2.0.0** (2025-10-15)
-
-Major rewrite with TypeScript, improved architecture, and production-ready code quality.
+- **Image Size:** ~231MB (production)
+- **Compression:** GZIP + Brotli enabled
+- **Caching:** Disabled for development (-c-1)
+- **Platform Support:** linux/amd64, linux/arm64
 
 ## License
 
-MIT
-
-## Author
-
-karachungen
+See main project LICENSE

@@ -1,19 +1,15 @@
-name: Build and Push CLI Docker Image
+name: Build and Push UI Docker Image
 
 on:
   push:
     branches:
       - main # Trigger on pushes to the main branch
     paths:
-      - 'Dockerfile'
-      - 'convert-to-iso-hdr.sh'
-      - 'hdr-config.cfg'
-      - 'entrypoint.sh'
-      - 'build.sh'
-      - '.github/workflows/push-docker-to-registry.yml'
+      - 'ui/**' # Only trigger when UI files change
+      - '.github/workflows/push-ui-docker-to-registry.yml'
 
 jobs:
-  build-and-push-cli:
+  build-and-push-ui:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -31,12 +27,11 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3 # Optional, for multi-platform builds
 
-      - name: Build and push CLI Docker image
+      - name: Build and push UI Docker image
         uses: docker/build-push-action@v6
         with:
-          context: . # Path to your Dockerfile context
+          context: ./ui # Path to UI Dockerfile context
           push: true
           platforms: linux/amd64,linux/arm64
-          tags: |
-            karachungen/instagram-hdr-converter:latest
-            karachungen/hdr-converter-cli:latest
+          tags: karachungen/hdr-converter-ui:latest
+

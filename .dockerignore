@@ -1,3 +1,8 @@
 README.md
 .git
-
+ui/node_modules
+ui/.nuxt
+ui/.output
+ui/dist
+ui/build
+ui/libultrahdr
