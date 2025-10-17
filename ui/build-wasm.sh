@@ -36,7 +36,8 @@ emcmake cmake ../libultrahdr \
     -DUHDR_BUILD_BENCHMARK=OFF \
     -DUHDR_BUILD_FUZZERS=OFF \
     -DUHDR_ENABLE_LOGS=ON \
-    -DUHDR_WRITE_XMP=ON
+    -DUHDR_WRITE_XMP=ON \
+    -DCMAKE_CXX_FLAGS="-s EXPORTED_FUNCTIONS='[_main]' -s EXPORTED_RUNTIME_METHODS='[FS,callMain]' -s ALLOW_MEMORY_GROWTH=1 -s MODULARIZE=1 -s EXPORT_NAME='UltraHDRModule'"
 
 echo "🔨 Building..."
 emmake make -j$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)

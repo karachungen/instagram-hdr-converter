@@ -16,7 +16,8 @@ RUN git clone https://github.com/google/libultrahdr.git && \
         -DUHDR_BUILD_FUZZERS=OFF \
         -DUHDR_ENABLE_LOGS=ON \
         -DUHDR_WRITE_XMP=ON \
-        -DUHDR_BUILD_DEPS=ON && \
+        -DUHDR_BUILD_DEPS=ON \
+        -DCMAKE_CXX_FLAGS="-s EXPORTED_FUNCTIONS='[_main]' -s EXPORTED_RUNTIME_METHODS='[FS,callMain]' -s ALLOW_MEMORY_GROWTH=1 -s MODULARIZE=1 -s EXPORT_NAME='UltraHDRModule'" && \
     cd build && \
     emmake make VERBOSE=1
 
