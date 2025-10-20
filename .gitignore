@@ -1,0 +1,16 @@
+# Build artifacts
+build-imagemagick/
+local/
+
+# Compiled executables
+magick
+magick-wrapper.sh
+ultrahdr_app
+
+# macOS
+.DS_Store
+
+# Temporary files
+temp/
+*.log
+

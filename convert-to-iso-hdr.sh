@@ -33,11 +33,48 @@ check_dependencies() {
     fi
 }
 
+check_magick_for_jxl() {
+    local script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    local magick_cmd=""
+    
+    # Check for local magick wrapper first
+    if [ -f "$script_dir/magick-wrapper.sh" ]; then
+        magick_cmd="$script_dir/magick-wrapper.sh"
+        print_info "Using local magick binary with wrapper"
+    elif [ -f "$script_dir/magick" ]; then
+        magick_cmd="$script_dir/magick"
+        # Set library path for local build
+        export DYLD_LIBRARY_PATH="$script_dir/local/lib:$DYLD_LIBRARY_PATH"
+        print_info "Using local magick binary: $magick_cmd"
+    elif command -v magick &> /dev/null; then
+        magick_cmd="magick"
+        print_info "Using system magick binary"
+    else
+        print_error "ImageMagick (magick) not found"
+        echo "Build it with: ./build-imagemagick-with-uhdr.sh"
+        echo "Or install with: brew install imagemagick"
+        exit 1
+    fi
+    
+    # Export for use in other functions
+    export MAGICK_CMD="$magick_cmd"
+    
+    # Check if ImageMagick has UHDR support
+    if ! $magick_cmd -list configure 2>&1 | grep -q "DELEGATES.*uhdr"; then
+        print_error "ImageMagick does not have UHDR support enabled"
+        echo "Build it with: ./build-imagemagick-with-uhdr.sh"
+        exit 1
+    fi
+    
+    print_success "ImageMagick with UHDR support found"
+}
+
 usage() {
     cat << EOF
-Usage: $0 [OPTIONS] <input_image.jpg>
+Usage: $0 [OPTIONS] <input_image.jpg|input_image.jxl>
 
-Convert HDR gain map images to Instagram-compatible ISO 21496-1 format.
+Convert HDR images to Instagram-compatible ISO 21496-1 format.
+Supports both HDR JPEG (with gain map) and JXL input formats.
 
 OPTIONS:
     -o, --output <file>     Output filename (default: input_iso.jpg)
@@ -46,13 +83,15 @@ OPTIONS:
     -h, --help              Show this help message
 
 EXAMPLES:
-    $0 photo.jpg
+    $0 photo.jpg                              # Convert HDR JPG to ISO HDR
+    $0 photo.jxl                              # Convert JXL to ISO HDR
     $0 -o instagram_ready.jpg -q 98 photo.jpg
-    $0 -f custom_metadata.cfg photo.jpg
+    $0 -f custom_metadata.cfg photo.jxl
 
 REQUIREMENTS:
     - exiftool (brew install exiftool)
     - libultrahdr with XMP support UHDR_WRITE_XMP=1
+    - ImageMagick with UHDR support (for JXL conversion)
 EOF
     exit 0
 }
@@ -106,23 +145,64 @@ fi
 # Set default output filename
 if [ -z "$OUTPUT_FILE" ]; then
     filename="${INPUT_FILE%.*}"
-    extension="${INPUT_FILE##*.}"
-    OUTPUT_FILE="${filename}_iso.${extension}"
+    # Always output as .jpg, even for .jxl inputs
+    OUTPUT_FILE="${filename}_iso.jpg"
 fi
 
 check_dependencies
 
-print_info "Processing: $INPUT_FILE → $OUTPUT_FILE"
-
-# Create temp directory
-INPUT_BASENAME=$(basename "$INPUT_FILE" .jpg)
-INPUT_BASENAME=$(basename "$INPUT_BASENAME" .jpeg)
+# Detect file type and handle JXL conversion if needed
+FILE_EXT="${INPUT_FILE##*.}"
+FILE_EXT_LOWER=$(echo "$FILE_EXT" | tr '[:upper:]' '[:lower:]')
 SCRIPT_DIR_PATH="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Create base temp directory
+INPUT_BASENAME=$(basename "$INPUT_FILE" ".$FILE_EXT")
 TEMP_DIR="$SCRIPT_DIR_PATH/temp/$INPUT_BASENAME"
 mkdir -p "$TEMP_DIR"
 trap "rm -rf $TEMP_DIR" EXIT
 
 print_info "Using temp directory: $TEMP_DIR"
+
+# If input is JXL, convert to intermediate HDR JPG first
+PROCESSING_FILE="$INPUT_FILE"
+if [ "$FILE_EXT_LOWER" = "jxl" ]; then
+    print_info "Detected JXL input, converting to intermediate HDR JPG..."
+    check_magick_for_jxl
+    
+    INTERMEDIATE_HDR="$TEMP_DIR/intermediate_hdr.jpg"
+    TRANSFER="pq"
+    HDR_GAMUT="bt709"
+    SDR_GAMUT="bt709"
+    
+    print_info "Settings: transfer=$TRANSFER, hdr-gamut=$HDR_GAMUT, sdr-gamut=$SDR_GAMUT"
+    
+    if $MAGICK_CMD "$INPUT_FILE" \
+        -define uhdr:hdr-color-transfer="$TRANSFER" \
+        -define uhdr:hdr-color-gamut="$HDR_GAMUT" \
+        -define uhdr:sdr-color-gamut="$SDR_GAMUT" \
+        UHDR:"$INTERMEDIATE_HDR" 2>&1 | tee "$TEMP_DIR/jxl_convert.log"; then
+        
+        if [ -f "$INTERMEDIATE_HDR" ]; then
+            print_success "JXL converted to intermediate HDR JPG"
+            PROCESSING_FILE="$INTERMEDIATE_HDR"
+        else
+            print_error "Intermediate HDR JPG was not created"
+            cat "$TEMP_DIR/jxl_convert.log"
+            exit 1
+        fi
+    else
+        print_error "JXL to HDR JPG conversion failed"
+        cat "$TEMP_DIR/jxl_convert.log"
+        exit 1
+    fi
+elif [ "$FILE_EXT_LOWER" != "jpg" ] && [ "$FILE_EXT_LOWER" != "jpeg" ]; then
+    print_error "Unsupported file format: .$FILE_EXT"
+    echo "Supported formats: .jpg, .jpeg, .jxl"
+    exit 1
+fi
+
+print_info "Processing: $INPUT_FILE → $OUTPUT_FILE"
 
 if ! command -v ./ultrahdr_app &> /dev/null; then
     print_error "libultrahdr (ultrahdr_app) not found!"
@@ -130,8 +210,8 @@ if ! command -v ./ultrahdr_app &> /dev/null; then
     exit 1
 fi
 
-IMAGE_WIDTH=$(exiftool -ImageWidth "$INPUT_FILE" 2>/dev/null | grep -oE '[0-9]+$')
-IMAGE_HEIGHT=$(exiftool -ImageHeight "$INPUT_FILE" 2>/dev/null | grep -oE '[0-9]+$')
+IMAGE_WIDTH=$(exiftool -ImageWidth "$PROCESSING_FILE" 2>/dev/null | grep -oE '[0-9]+$')
+IMAGE_HEIGHT=$(exiftool -ImageHeight "$PROCESSING_FILE" 2>/dev/null | grep -oE '[0-9]+$')
 
 if [ -z "$IMAGE_WIDTH" ] || [ -z "$IMAGE_HEIGHT" ]; then
     print_error "Could not determine image dimensions"
@@ -146,13 +226,13 @@ INPUT_METADATA="$TEMP_DIR/input_metadata.cfg"
 
 print_info "Decoding HDR and extracting metadata..."
 
-if ./ultrahdr_app -m 1 -j "$INPUT_FILE" -z "$TEMP_HDR_RAW" -o 1 -O 5 -f "$INPUT_METADATA" &> "$TEMP_DIR/decode.log"; then
+if ./ultrahdr_app -m 1 -j "$PROCESSING_FILE" -z "$TEMP_HDR_RAW" -o 1 -O 5 -f "$INPUT_METADATA" &> "$TEMP_DIR/decode.log"; then
     print_success "Successfully decoded HDR image"
     
     print_info "Generating SDR version..."
     TEMP_SDR_RAW="$TEMP_DIR/sdr_decoded.raw"
     
-    if ./ultrahdr_app -m 1 -j "$INPUT_FILE" -z "$TEMP_SDR_RAW" -o 3 -O 3 &> "$TEMP_DIR/sdr_decode.log"; then
+    if ./ultrahdr_app -m 1 -j "$PROCESSING_FILE" -z "$TEMP_SDR_RAW" -o 3 -O 3 &> "$TEMP_DIR/sdr_decode.log"; then
         print_success "Decoded to SDR format"
         
             
@@ -189,13 +269,44 @@ if ./ultrahdr_app -m 1 -j "$INPUT_FILE" -z "$TEMP_HDR_RAW" -o 1 -O 5 -f "$INPUT_
     print_info "Extracting original gain map..."
     TEMP_GAINMAP="$TEMP_DIR/original_gainmap.jpg"
     
-    if exiftool -b -MPImage2 "$INPUT_FILE" > "$TEMP_GAINMAP" 2>/dev/null && [ -s "$TEMP_GAINMAP" ]; then
+    if exiftool -b -MPImage2 "$PROCESSING_FILE" > "$TEMP_GAINMAP" 2>/dev/null && [ -s "$TEMP_GAINMAP" ]; then
         print_success "Extracted original gain map"
         
         if exiftool -xmp:all= "$TEMP_GAINMAP" -overwrite_original &> "$TEMP_DIR/gainmap_clean.log"; then
             print_success "Cleaned gain map metadata"
         else
             print_error "Failed to clean gain map metadata"
+            exit 1
+        fi
+        
+        # Re-compress gain map with 4:2:0 YCbCr subsampling
+        print_info "Re-compressing gain map with YCbCr 4:2:0 subsampling..."
+        
+        GAINMAP_WIDTH=$(exiftool -ImageWidth "$TEMP_GAINMAP" 2>/dev/null | grep -oE '[0-9]+$')
+        GAINMAP_HEIGHT=$(exiftool -ImageHeight "$TEMP_GAINMAP" 2>/dev/null | grep -oE '[0-9]+$')
+        
+        if [ -z "$GAINMAP_WIDTH" ] || [ -z "$GAINMAP_HEIGHT" ]; then
+            print_error "Could not determine gain map dimensions"
+            exit 1
+        fi
+        
+        print_info "Gain map dimensions: ${GAINMAP_WIDTH}x${GAINMAP_HEIGHT}"
+        
+        TEMP_GAINMAP_420="$TEMP_DIR/gainmap_420.jpg"
+        
+        if command -v convert &> /dev/null; then
+            # Convert JPEG gain map to PPM, then compress with 4:2:0 subsampling
+            convert "$TEMP_GAINMAP" ppm:- 2>/dev/null | \
+            cjpeg -quality 100 -sample 2x2 -progressive -optimize > "$TEMP_GAINMAP_420" 2>/dev/null
+            
+            if [ $? -eq 0 ] && [ -s "$TEMP_GAINMAP_420" ]; then
+                print_success "Created 4:2:0 gain map"
+            else
+                print_error "Failed to create 4:2:0 gain map"
+                exit 1
+            fi
+        else
+            print_error "ImageMagick not found, cannot convert gain map"
             exit 1
         fi
         
@@ -221,7 +332,7 @@ if ./ultrahdr_app -m 1 -j "$INPUT_FILE" -z "$TEMP_HDR_RAW" -o 1 -O 5 -f "$INPUT_
         
         if ./ultrahdr_app -m 0 \
             -i "$TEMP_SDR_420" \
-            -g "$TEMP_GAINMAP" \
+            -g "$TEMP_GAINMAP_420" \
             -f "$METADATA_FILE" \
             -z "$TEMP_ULTRAHDR_OUTPUT" &> "$TEMP_DIR/encode.log"; then
             print_success "Successfully re-encoded to Instagram HDR format"
