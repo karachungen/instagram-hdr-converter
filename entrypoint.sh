@@ -2,8 +2,9 @@
 set -e
 
 # Entrypoint script for HDR ISO conversion
-# Supports JXL and HDR JPEG input formats
+# Supports JXL, AVIF, and HDR JPEG input formats
 # Usage: docker run hdr-iso-converter photo.jxl
+#        docker run hdr-iso-converter photo.avif
 #        docker run hdr-iso-converter photo.jpg
 #        docker run hdr-iso-converter -o output.jpg photo.jxl
 
@@ -30,11 +31,14 @@ if [ $# -eq 0 ]; then
     cat << 'EOF'
 HDR ISO Converter Docker Container
 
-Converts HDR images (JXL or HDR JPEG) to Instagram-compatible ISO 21496-1 format.
+Converts HDR images (JXL, AVIF, or HDR JPEG) to Instagram-compatible ISO 21496-1 format.
 
 USAGE:
   # Convert JXL to ISO HDR (recommended)
   docker run -v $(pwd):/data hdr-iso-converter photo.jxl
+  
+  # Convert AVIF to ISO HDR
+  docker run -v $(pwd):/data hdr-iso-converter photo.avif
   
   # Convert HDR JPEG to ISO HDR
   docker run -v $(pwd):/data hdr-iso-converter photo.jpg
@@ -43,9 +47,9 @@ USAGE:
   docker run -v $(pwd):/data hdr-iso-converter -o instagram.jpg photo.jxl
   
   # Convert with quality setting
-  docker run -v $(pwd):/data hdr-iso-converter -q 98 photo.jpg
+  docker run -v $(pwd):/data hdr-iso-converter -q 98 photo.avif
   
-  # Convert HDR JPEG with custom metadata (JXL not supported)
+  # Convert HDR JPEG with custom metadata (JXL/AVIF not supported)
   docker run -v $(pwd):/data hdr-iso-converter -f metadata.cfg photo.jpg
   
   # Run other tools
@@ -58,6 +62,7 @@ USAGE:
 
 SUPPORTED FORMATS:
   - JXL (JPEG XL with HDR) - Recommended for best quality
+  - AVIF (AV1 Image File Format with HDR) - Modern format
   - HDR JPEG (with gain map) - Legacy format
 
 AVAILABLE TOOLS:

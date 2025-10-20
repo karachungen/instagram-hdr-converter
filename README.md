@@ -10,7 +10,7 @@ Choose one of these methods:
 **Best method to preserve original image appearance**
 
 1.1. Export from Lightroom with these settings:
-- **Format:** JXL
+- **Format:** JXL or AVIF
 - **Enable HDR Output** ✅
 - **Color Space:** HDR sRGB (Rec. 709)
 - **Maximize Compatibility:** ❌ Uncheck this option
@@ -54,7 +54,7 @@ This Docker container includes:
 - **ImageMagick with UHDR support** - Image conversion with Ultra HDR capabilities
 - **libultrahdr** - Google's Ultra HDR library (built from source with UHDR_WRITE_XMP enabled)
 - **convert-to-iso-hdr.sh** - HDR to ISO 21496-1 conversion script
-- **JXL and HDR JPEG support** - Automatic format detection and conversion
+- **JXL, AVIF, and HDR JPEG support** - Automatic format detection and conversion
 
 
 ## Building the Image
@@ -70,6 +70,11 @@ docker build -t hdr-iso-converter .
 docker run --rm -v $(pwd):/data hdr-iso-converter photo.jxl
 ```
 
+### Convert AVIF to ISO HDR:
+```bash
+docker run --rm -v $(pwd):/data hdr-iso-converter photo.avif
+```
+
 ### Convert HDR JPEG to ISO HDR:
 ```bash
 docker run --rm -v $(pwd):/data hdr-iso-converter photo.jpg
@@ -82,7 +87,7 @@ docker run --rm -v $(pwd):/data hdr-iso-converter -o instagram.jpg photo.jxl
 
 ### Convert with custom quality:
 ```bash
-docker run --rm -v $(pwd):/data hdr-iso-converter -q 98 photo.jpg
+docker run --rm -v $(pwd):/data hdr-iso-converter -q 98 photo.avif
 ```
 
 ### Convert HDR JPEG with custom metadata config:
@@ -90,7 +95,7 @@ docker run --rm -v $(pwd):/data hdr-iso-converter -q 98 photo.jpg
 docker run --rm -v $(pwd):/data hdr-iso-converter -f custom_metadata.cfg photo.jpg
 ```
 
-**Note:** Custom metadata files only work with HDR JPEG input, not with JXL.
+**Note:** Custom metadata files only work with HDR JPEG input, not with JXL or AVIF.
 
 ## Web UI (WASM)
 

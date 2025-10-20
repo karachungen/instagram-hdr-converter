@@ -33,7 +33,7 @@ check_dependencies() {
     fi
 }
 
-check_magick_for_jxl() {
+check_magick_for_conversion() {
     local script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
     local magick_cmd=""
     
@@ -71,10 +71,10 @@ check_magick_for_jxl() {
 
 usage() {
     cat << EOF
-Usage: $0 [OPTIONS] <input_image.jpg|input_image.jxl>
+Usage: $0 [OPTIONS] <input_image.jpg|input_image.jxl|input_image.avif>
 
 Convert HDR images to Instagram-compatible ISO 21496-1 format.
-Supports both HDR JPEG (with gain map) and JXL input formats.
+Supports HDR JPEG (with gain map), JXL, and AVIF input formats.
 
 OPTIONS:
     -o, --output <file>     Output filename (default: input_iso.jpg)
@@ -85,13 +85,14 @@ OPTIONS:
 EXAMPLES:
     $0 photo.jpg                              # Convert HDR JPG to ISO HDR
     $0 photo.jxl                              # Convert JXL to ISO HDR
+    $0 photo.avif                             # Convert AVIF to ISO HDR
     $0 -o instagram_ready.jpg -q 98 photo.jpg
     $0 -f custom_metadata.cfg photo.jxl
 
 REQUIREMENTS:
     - exiftool (brew install exiftool)
     - libultrahdr with XMP support UHDR_WRITE_XMP=1
-    - ImageMagick with UHDR support (for JXL conversion)
+    - ImageMagick with UHDR support (for JXL/AVIF conversion)
 EOF
     exit 0
 }
@@ -164,11 +165,11 @@ trap "rm -rf $TEMP_DIR" EXIT
 
 print_info "Using temp directory: $TEMP_DIR"
 
-# If input is JXL, convert to intermediate HDR JPG first
+# If input is JXL or AVIF, convert to intermediate HDR JPG first
 PROCESSING_FILE="$INPUT_FILE"
-if [ "$FILE_EXT_LOWER" = "jxl" ]; then
-    print_info "Detected JXL input, converting to intermediate HDR JPG..."
-    check_magick_for_jxl
+if [ "$FILE_EXT_LOWER" = "jxl" ] || [ "$FILE_EXT_LOWER" = "avif" ]; then
+    print_info "Detected $FILE_EXT_LOWER input, converting to intermediate HDR JPG..."
+    check_magick_for_conversion
     
     INTERMEDIATE_HDR="$TEMP_DIR/intermediate_hdr.jpg"
     TRANSFER="pq"
@@ -181,24 +182,24 @@ if [ "$FILE_EXT_LOWER" = "jxl" ]; then
         -define uhdr:hdr-color-transfer="$TRANSFER" \
         -define uhdr:hdr-color-gamut="$HDR_GAMUT" \
         -define uhdr:sdr-color-gamut="$SDR_GAMUT" \
-        UHDR:"$INTERMEDIATE_HDR" 2>&1 | tee "$TEMP_DIR/jxl_convert.log"; then
+        UHDR:"$INTERMEDIATE_HDR" 2>&1 | tee "$TEMP_DIR/format_convert.log"; then
         
         if [ -f "$INTERMEDIATE_HDR" ]; then
-            print_success "JXL converted to intermediate HDR JPG"
+            print_success "$FILE_EXT_LOWER converted to intermediate HDR JPG"
             PROCESSING_FILE="$INTERMEDIATE_HDR"
         else
             print_error "Intermediate HDR JPG was not created"
-            cat "$TEMP_DIR/jxl_convert.log"
+            cat "$TEMP_DIR/format_convert.log"
             exit 1
         fi
     else
-        print_error "JXL to HDR JPG conversion failed"
-        cat "$TEMP_DIR/jxl_convert.log"
+        print_error "$FILE_EXT_LOWER to HDR JPG conversion failed"
+        cat "$TEMP_DIR/format_convert.log"
         exit 1
     fi
 elif [ "$FILE_EXT_LOWER" != "jpg" ] && [ "$FILE_EXT_LOWER" != "jpeg" ]; then
     print_error "Unsupported file format: .$FILE_EXT"
-    echo "Supported formats: .jpg, .jpeg, .jxl"
+    echo "Supported formats: .jpg, .jpeg, .jxl, .avif"
     exit 1
 fi
 
