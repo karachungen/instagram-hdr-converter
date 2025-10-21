@@ -1,0 +1,30 @@
+{
+  "name": "instagram-hdr-converter",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "nuxt dev",
+    "build": "nuxt build",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
+  },
+  "dependencies": {
+    "@iconify-json/lucide": "^1.2.70",
+    "@img-comparison-slider/vue": "^8.0.0",
+    "@nuxt/ui": "^4.0.0",
+    "@pinia/nuxt": "^0.5.1",
+    "img-comparison-slider": "^8.0.6",
+    "pinia": "^2.1.7",
+    "vue": "^3.4.21"
+  },
+  "devDependencies": {
+    "@nuxt/eslint": "^1.9.0",
+    "@types/node": "^20.11.30",
+    "nuxt": "^4.0.0",
+    "typescript": "^5.4.3"
+  }
+}

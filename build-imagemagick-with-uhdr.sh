@@ -227,29 +227,62 @@ if [ ! -f "configure" ]; then
     autoreconf -fiv
 fi
 
+print_info "Verifying libuhdr is available..."
+
+# Set up environment for configure
+export PKG_CONFIG_PATH="$INSTALL_PREFIX/lib/pkgconfig:$(brew --prefix 2>/dev/null)/lib/pkgconfig:$PKG_CONFIG_PATH"
+export CPPFLAGS="-I$INSTALL_PREFIX/include"
+export LDFLAGS="-L$INSTALL_PREFIX/lib"
+
+# Add brew lib path if on macOS
+if command -v brew &> /dev/null; then
+    BREW_PREFIX=$(brew --prefix)
+    export LDFLAGS="$LDFLAGS -L$BREW_PREFIX/lib"
+fi
+
+# Verify libuhdr is found by pkg-config (note: package name is libuhdr, not libultrahdr)
+if pkg-config --exists libuhdr 2>/dev/null; then
+    UHDR_VERSION=$(pkg-config --modversion libuhdr)
+    print_success "libuhdr found via pkg-config (version $UHDR_VERSION)"
+    print_info "UHDR CFLAGS: $(pkg-config --cflags libuhdr)"
+    print_info "UHDR LIBS: $(pkg-config --libs libuhdr)"
+else
+    print_error "libuhdr not found by pkg-config"
+    print_info "PKG_CONFIG_PATH: $PKG_CONFIG_PATH"
+    print_info "Available .pc files:"
+    ls -1 "$INSTALL_PREFIX/lib/pkgconfig/" 2>/dev/null || echo "No pkgconfig directory found"
+    exit 1
+fi
+
 print_info "Configuring ImageMagick with libultrahdr support..."
 
-# Configure flags
-CONFIGURE_FLAGS=(
-    "--prefix=$INSTALL_PREFIX"
-    "--with-uhdr=yes"
-    "--enable-shared"
-    "--disable-static"
-    "--without-modules"
-    "--disable-opencl"
-    "--with-quantum-depth=16"
-    "--with-jpeg=yes"
-    "--with-png=yes"
-    "--without-perl"
-    "--without-x"
-)
+# Configure flags - matching Dockerfile approach
+PKG_CONFIG_PATH="$PKG_CONFIG_PATH" \
+CPPFLAGS="$CPPFLAGS" \
+LDFLAGS="$LDFLAGS" \
+./configure \
+    --prefix="$INSTALL_PREFIX" \
+    --with-uhdr=yes \
+    --enable-shared \
+    --disable-static \
+    --without-modules \
+    --disable-opencl \
+    --with-quantum-depth=16 \
+    --with-jpeg=yes \
+    --with-png=yes \
+    --without-perl \
+    --without-x
 
-# Add custom PKG_CONFIG_PATH for configure if needed
-export PKG_CONFIG_PATH="$INSTALL_PREFIX/lib/pkgconfig:$(brew --prefix)/lib/pkgconfig:$PKG_CONFIG_PATH"
-export CPPFLAGS="-I$INSTALL_PREFIX/include"
-export LDFLAGS="-L$INSTALL_PREFIX/lib -L$(brew --prefix)/lib"
-
-./configure "${CONFIGURE_FLAGS[@]}"
+# Verify UHDR was detected in configuration
+print_info "Verifying UHDR was detected by configure..."
+if grep -q "checking for UHDR.*yes" config.log 2>/dev/null || \
+   grep -q "UHDR.*yes" config.log 2>/dev/null; then
+    print_success "UHDR support detected in configuration"
+else
+    print_error "UHDR support may not have been detected properly"
+    print_info "Checking config.log for UHDR references..."
+    grep -i "uhdr" config.log | tail -20 || echo "No UHDR references found in config.log"
+fi
 
 print_info "Building ImageMagick (this may take 10-20 minutes)..."
 make -j$JOBS
@@ -323,8 +356,10 @@ echo "  ./magick -version"
 echo "  ./magick -list configure | grep uhdr"
 echo "  ./ultrahdr_app -h"
 echo ""
-echo "Try converting an AVIF to HDR JPG:"
-echo "  ./convert-avif-to-hdr-jpg.sh your-image.avif"
+echo "Try converting HDR images:"
+echo "  ./convert-to-iso-hdr.sh photo.jpg    # HDR JPEG"
+echo "  ./convert-to-iso-hdr.sh photo.jxl    # JXL"
+echo "  ./convert-to-iso-hdr.sh photo.avif   # AVIF"
 echo ""
 echo "Note: Set DYLD_LIBRARY_PATH if needed:"
 echo "  export DYLD_LIBRARY_PATH=\"$INSTALL_PREFIX/lib:\$DYLD_LIBRARY_PATH\""
