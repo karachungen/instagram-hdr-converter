@@ -30,34 +30,23 @@ RUN chmod +x /tmp/build-docker.sh && \
     INSTALL_PREFIX=/usr/local NUM_CORES=$(nproc) /tmp/build-docker.sh && \
     rm /tmp/build-docker.sh
 
-# Copy scripts and configuration files
-COPY convert-to-iso-hdr.sh /usr/local/bin/convert-to-iso-hdr.sh
-COPY hdr-config.cfg /usr/local/bin/hdr-config.cfg
-COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+# Copy scripts and configuration files to /app
+COPY convert-to-iso-hdr.sh /app/convert-to-iso-hdr.sh
+COPY hdr-config.cfg /app/hdr-config.cfg
+COPY entrypoint.sh /app/entrypoint.sh
 
-
-# Make scripts executable
-RUN chmod +x /usr/local/bin/convert-to-iso-hdr.sh && \
-    chmod +x /usr/local/bin/entrypoint.sh
-
-# Update convert-to-iso-hdr.sh to use correct paths in container
-RUN sed -i 's|"$SCRIPT_DIR_PATH/hdr-config.cfg"|"/usr/local/bin/hdr-config.cfg"|g' /usr/local/bin/convert-to-iso-hdr.sh && \
-    sed -i 's|local magick_cmd="./magick"|local magick_cmd="magick"|g' /usr/local/bin/convert-to-iso-hdr.sh && \
-    sed -i 's|if \[ -f "$script_dir/magick" \]; then|if command -v magick \&> /dev/null; then|g' /usr/local/bin/convert-to-iso-hdr.sh && \
-    sed -i '/export DYLD_LIBRARY_PATH/d' /usr/local/bin/convert-to-iso-hdr.sh && \
-    sed -i 's|Using local magick binary:|Using system magick binary:|g' /usr/local/bin/convert-to-iso-hdr.sh && \
-    sed -i 's|Local ImageMagick (magick) not found at: $script_dir/magick|System ImageMagick (magick) not found in PATH|g' /usr/local/bin/convert-to-iso-hdr.sh && \
-    sed -i 's|ULTRAHDR_APP="./ultrahdr_app"|ULTRAHDR_APP="ultrahdr_app"|g' /usr/local/bin/convert-to-iso-hdr.sh && \
-    sed -i 's|if \[ ! -f "$SCRIPT_DIR_PATH/ultrahdr_app" \]; then|if ! command -v ultrahdr_app \&> /dev/null; then|g' /usr/local/bin/convert-to-iso-hdr.sh && \
-    sed -i 's|print_error "libultrahdr (ultrahdr_app) not found at: $SCRIPT_DIR_PATH/ultrahdr_app"|print_error "System ultrahdr_app not found in PATH"|g' /usr/local/bin/convert-to-iso-hdr.sh && \
-    sed -i 's|Using local ultrahdr_app binary:|Using system ultrahdr_app binary:|g' /usr/local/bin/convert-to-iso-hdr.sh && \
-    sed -i 's|command -v \./ultrahdr_app|command -v ultrahdr_app|g' /usr/local/bin/convert-to-iso-hdr.sh
+# Make scripts executable and symlink binaries to /app for relative path access
+RUN chmod +x /app/convert-to-iso-hdr.sh /app/entrypoint.sh && \
+    ln -s /usr/local/bin/magick /app/magick && \
+    ln -s /usr/local/bin/ultrahdr_app /app/ultrahdr_app && \
+    sed -i 's|local magick_cmd="./magick"|local magick_cmd="$script_dir/magick"|g' /app/convert-to-iso-hdr.sh && \
+    sed -i 's|ULTRAHDR_APP="./ultrahdr_app"|ULTRAHDR_APP="$SCRIPT_DIR_PATH/ultrahdr_app"|g' /app/convert-to-iso-hdr.sh
 
 # Set the working directory for file operations
 WORKDIR /data
 
 # Set entrypoint
-ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+ENTRYPOINT ["/app/entrypoint.sh"]
 
 # Default command (shows help)
 CMD []

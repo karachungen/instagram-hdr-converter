@@ -84,10 +84,10 @@ case "$1" in
         ;;
     convert-to-iso-hdr.sh)
         shift
-        exec /usr/local/bin/convert-to-iso-hdr.sh "$@"
+        exec /app/convert-to-iso-hdr.sh "$@"
         ;;
     -h|--help|help)
-        /usr/local/bin/convert-to-iso-hdr.sh --help
+        /app/convert-to-iso-hdr.sh --help
         exit 0
         ;;
 esac
@@ -148,5 +148,5 @@ if [ -n "$OUTPUT_FILE" ]; then
 fi
 
 print_info "Converting: $INPUT_FILE → ${OUTPUT_FILE:-${INPUT_FILE%.*}_iso.jpg}"
-exec /usr/local/bin/convert-to-iso-hdr.sh "${EXTRA_ARGS[@]}" "$INPUT_FILE"
+exec /app/convert-to-iso-hdr.sh "${EXTRA_ARGS[@]}" "$INPUT_FILE"
 
