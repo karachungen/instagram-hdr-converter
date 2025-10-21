@@ -120,16 +120,26 @@ const hasSizeWarning = computed(() => props.file.sizeWarning === true)
             {{ file.name }}
           </p>
 
-          <!-- Processing Step Indicator -->
-          <div v-if="stepInfo" class="flex items-center gap-2 text-xs text-primary-600 dark:text-primary-400">
-            <UIcon :name="stepInfo.icon" class="animate-pulse" />
-            <span class="font-medium">{{ stepInfo.label }}</span>
-            <span class="text-gray-500 dark:text-gray-400">{{ stepInfo.message }}</span>
-          </div>
-
           <div class="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
             <span>{{ formatFileSize(file.size) }}</span>
+            <span v-if="dimensionsText" class="text-gray-400">•</span>
+            <span v-if="dimensionsText">{{ dimensionsText }}</span>
           </div>
+
+          <!-- Size Warning -->
+          <UAlert
+            v-if="hasSizeWarning"
+            color="warning"
+            variant="subtle"
+            :ui="{ wrapper: 'mt-2' }"
+          >
+            <template #icon>
+              <UIcon name="i-lucide-alert-triangle" class="flex-shrink-0" />
+            </template>
+            <template #description>
+              <span class="text-xs">Image exceeds 1080px. Instagram may resize and remove HDR gain map after upload.</span>
+            </template>
+          </UAlert>
 
           <!-- Progress Bar -->
           <div
