@@ -15,7 +15,8 @@ const logsExpanded = computed({
 // Initialize on mount
 onMounted(() => {
   logsStore.add('Instagram HDR Converter initialized', 'success')
-  logsStore.add('Upload AVIF files to convert to Instagram-compatible HDR JPEG', 'info')
+  logsStore.add('Upload AVIF or JPEG (HDR) files to convert to Instagram-compatible format', 'info')
+  logsStore.add('Images will be validated for HDR content and optimal size (≤1080px)', 'info')
 })
 </script>
 

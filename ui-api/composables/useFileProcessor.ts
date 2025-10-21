@@ -1,7 +1,7 @@
 import type { ProcessingFile, ConversionResult, ProcessResult } from '~/types'
 
 interface UseFileProcessorReturn {
-  addFiles: (fileList: FileList | File[]) => void
+  addFiles: (fileList: FileList | File[]) => Promise<void>
   removeFile: (fileId: string) => void
   clearFiles: () => void
   processAllFiles: (toast: any) => Promise<void>
@@ -85,11 +85,11 @@ export function useFileProcessor(): UseFileProcessorReturn {
   }
 
   /**
-   * Validate file is AVIF
+   * Validate file is AVIF or JPEG
    */
-  const validateAvifFile = (file: File): boolean => {
-    const validTypes = ['image/avif']
-    const validExtensions = ['.avif']
+  const validateImageFile = (file: File): boolean => {
+    const validTypes = ['image/avif', 'image/jpeg', 'image/jpg']
+    const validExtensions = ['.avif', '.jpg', '.jpeg']
 
     const hasValidType = validTypes.includes(file.type)
     const hasValidExtension = validExtensions.some(ext =>
@@ -100,17 +100,43 @@ export function useFileProcessor(): UseFileProcessorReturn {
   }
 
   /**
+   * Validate HDR status of file via API
+   */
+  const validateHDR = async (file: File): Promise<import('~/types').HdrValidationInfo> => {
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const response = await $fetch<import('~/types').HdrValidationInfo>('/api/validate-hdr', {
+        method: 'POST',
+        body: formData,
+      })
+
+      return response
+    } catch (error: any) {
+      return {
+        isHDR: false,
+        fileType: file.name.toLowerCase().endsWith('.avif') ? 'avif' : 'jpeg',
+        details: `Validation failed: ${error.message}`,
+      }
+    }
+  }
+
+  /**
    * Add files to the processing queue
    */
-  const addFiles = (fileList: FileList | File[]): void => {
+  const addFiles = async (fileList: FileList | File[]): Promise<void> => {
     const fileArray = Array.from(fileList)
     logsStore.add(`Adding ${fileArray.length} file(s) to list...`, 'info')
 
-    fileArray.forEach(async (file) => {
-      // Validate AVIF file
-      if (!validateAvifFile(file)) {
-        logsStore.add(`✗ Skipped ${file.name}: Only AVIF files are supported`, 'error')
-        return
+    const sizeWarnings: string[] = []
+    const hdrWarnings: string[] = []
+
+    for (const file of fileArray) {
+      // Validate image file (AVIF or JPEG)
+      if (!validateImageFile(file)) {
+        logsStore.add(`✗ Skipped ${file.name}: Only AVIF and JPEG files are supported`, 'error')
+        continue
       }
 
       const fileId = generateFileId()
@@ -144,10 +170,32 @@ export function useFileProcessor(): UseFileProcessorReturn {
             `⚠️ ${file.name}: ${dimensions.width}x${dimensions.height}px exceeds 1080px - Instagram may resize and remove HDR gain map!`,
             'warning'
           )
+          sizeWarnings.push(file.name)
         } else {
           logsStore.add(
             `✓ ${file.name}: ${dimensions.width}x${dimensions.height}px (within Instagram limits)`,
             'info'
+          )
+        }
+
+        // Validate HDR status
+        logsStore.add(`Validating HDR status for ${file.name}...`, 'info')
+        const hdrInfo = await validateHDR(file)
+
+        filesStore.updateFile(fileId, {
+          hdrInfo,
+        })
+
+        if (!hdrInfo.isHDR) {
+          logsStore.add(
+            `⚠️ ${file.name}: ${hdrInfo.details || 'Not an HDR image'} - Will not produce proper HDR output!`,
+            'warning'
+          )
+          hdrWarnings.push(file.name)
+        } else {
+          logsStore.add(
+            `✓ ${file.name}: ${hdrInfo.details || 'HDR image confirmed'}`,
+            'success'
           )
         }
 
@@ -165,7 +213,31 @@ export function useFileProcessor(): UseFileProcessorReturn {
         })
         logsStore.add(`✗ Failed to load ${fileObj.name}: ${error.message}`, 'error')
       }
-    })
+    }
+
+    const toast = useToast()
+
+    // Show warning summary if any files exceed size limits
+    if (sizeWarnings.length > 0) {
+      toast.add({
+        title: 'Image Size Warning',
+        description: `${sizeWarnings.length} image(s) exceed 1080px. Instagram may resize and remove HDR gain map.`,
+        icon: 'i-lucide-alert-triangle',
+        color: 'warning',
+        timeout: 8000,
+      })
+    }
+
+    // Show warning if any files are not HDR
+    if (hdrWarnings.length > 0) {
+      toast.add({
+        title: 'Non-HDR Images Detected',
+        description: `${hdrWarnings.length} image(s) are not HDR. Processing may not produce proper HDR output.`,
+        icon: 'i-lucide-alert-circle',
+        color: 'error',
+        timeout: 10000,
+      })
+    }
   }
 
   /**

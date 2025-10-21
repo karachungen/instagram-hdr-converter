@@ -25,6 +25,16 @@ export interface ProcessingFile {
     height: number
   }
   sizeWarning?: boolean
+  hdrInfo?: HdrValidationInfo
+}
+
+// HDR validation info
+export interface HdrValidationInfo {
+  isHDR: boolean
+  fileType: 'jpeg' | 'avif'
+  bitDepth?: number
+  colorSpace?: string
+  details?: string
 }
 
 // API conversion response

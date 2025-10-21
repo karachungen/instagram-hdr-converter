@@ -45,7 +45,7 @@ function toggleLogs() {
                 Instagram HDR Converter
               </h1>
               <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                Convert AVIF to Instagram-compatible HDR JPEG
+                Convert AVIF & JPEG HDR to Instagram-compatible format
               </p>
             </div>
           </div>

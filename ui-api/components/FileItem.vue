@@ -99,6 +99,19 @@ const dimensionsText = computed(() => {
  * Check if image has size warning
  */
 const hasSizeWarning = computed(() => props.file.sizeWarning === true)
+
+/**
+ * Check if image has HDR warning (not HDR)
+ */
+const hasHDRWarning = computed(() => props.file.hdrInfo && !props.file.hdrInfo.isHDR)
+
+/**
+ * HDR status text
+ */
+const hdrStatusText = computed(() => {
+  if (!props.file.hdrInfo) return null
+  return props.file.hdrInfo.details || (props.file.hdrInfo.isHDR ? 'HDR' : 'Not HDR')
+})
 </script>
 
 <template>
@@ -126,6 +139,21 @@ const hasSizeWarning = computed(() => props.file.sizeWarning === true)
             <span v-if="dimensionsText">{{ dimensionsText }}</span>
           </div>
 
+          <!-- HDR Status Badge -->
+          <div v-if="hdrStatusText" class="flex items-center gap-2 text-xs">
+            <UBadge
+              :color="hasHDRWarning ? 'error' : 'success'"
+              variant="subtle"
+              size="xs"
+            >
+              <UIcon
+                :name="hasHDRWarning ? 'i-lucide-x-circle' : 'i-lucide-check-circle'"
+                class="mr-1"
+              />
+              {{ hdrStatusText }}
+            </UBadge>
+          </div>
+
           <!-- Size Warning -->
           <UAlert
             v-if="hasSizeWarning"
@@ -138,6 +166,21 @@ const hasSizeWarning = computed(() => props.file.sizeWarning === true)
             </template>
             <template #description>
               <span class="text-xs">Image exceeds 1080px. Instagram may resize and remove HDR gain map after upload.</span>
+            </template>
+          </UAlert>
+
+          <!-- HDR Warning -->
+          <UAlert
+            v-if="hasHDRWarning"
+            color="error"
+            variant="subtle"
+            :ui="{ wrapper: 'mt-2' }"
+          >
+            <template #icon>
+              <UIcon name="i-lucide-x-circle" class="flex-shrink-0" />
+            </template>
+            <template #description>
+              <span class="text-xs">{{ hdrStatusText }} - Processing will not produce proper HDR output!</span>
             </template>
           </UAlert>
 

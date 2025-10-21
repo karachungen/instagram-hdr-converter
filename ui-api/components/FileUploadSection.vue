@@ -3,18 +3,18 @@ const { addFiles } = useFileProcessor()
 const isDragging = ref(false)
 const fileInput = ref<HTMLInputElement>()
 
-const handleDrop = (event: DragEvent) => {
+const handleDrop = async (event: DragEvent) => {
   isDragging.value = false
   const files = event.dataTransfer?.files
   if (files && files.length > 0) {
-    addFiles(files)
+    await addFiles(files)
   }
 }
 
-const handleFileSelect = (event: Event) => {
+const handleFileSelect = async (event: Event) => {
   const input = event.target as HTMLInputElement
   if (input.files && input.files.length > 0) {
-    addFiles(input.files)
+    await addFiles(input.files)
     // Reset input to allow selecting the same file again
     input.value = ''
   }
@@ -29,7 +29,7 @@ const triggerFileInput = () => {
   <section aria-labelledby="upload-heading">
     <h2 id="upload-heading" class="text-lg font-semibold mb-4 flex items-center">
       <UIcon name="i-lucide-folder-open" class="mr-2" />
-      Upload AVIF Files
+      Upload HDR Images
     </h2>
 
     <div
@@ -46,7 +46,7 @@ const triggerFileInput = () => {
       <input
         ref="fileInput"
         type="file"
-        accept=".avif,image/avif"
+        accept=".avif,.jpg,.jpeg,image/avif,image/jpeg"
         multiple
         class="hidden"
         @change="handleFileSelect"
@@ -58,12 +58,17 @@ const triggerFileInput = () => {
       />
 
       <p class="text-lg font-medium text-gray-700 dark:text-gray-300 mb-1">
-        Drop your AVIF HDR images here
+        Drop your HDR images here
       </p>
 
       <p class="text-sm text-gray-500 dark:text-gray-400">
-        Only AVIF files supported • Multiple files supported
+        AVIF & JPEG (HDR) files supported • Multiple files supported
       </p>
+
+      <div class="mt-3 text-xs text-gray-500 dark:text-gray-400 flex items-center justify-center gap-1">
+        <UIcon name="i-lucide-info" class="flex-shrink-0" />
+        <span>Recommended: Keep images ≤1080px for Instagram HDR compatibility</span>
+      </div>
 
       <UButton
         color="primary"
