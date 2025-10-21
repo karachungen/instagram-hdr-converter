@@ -35,91 +35,10 @@ print_step() {
 # Create build directory
 mkdir -p "$BUILD_DIR"
 
-# Step 1: Build libhwy (Highway - required for libjxl)
-print_step "Building libhwy (Highway)"
+print_info "Note: Using system packages for JXL and HEIF support"
+print_info "Only building libultrahdr from source (required for UHDR_WRITE_XMP)"
 
-print_info "Cloning libhwy repository..."
-git clone --depth 1 --branch 1.0.7 https://github.com/google/highway.git "$BUILD_DIR/highway"
-cd "$BUILD_DIR/highway"
-
-print_info "Configuring libhwy..."
-cmake -S. -Bbuild \
-    -DCMAKE_BUILD_TYPE=Release \
-    -DCMAKE_INSTALL_PREFIX="$INSTALL_PREFIX" \
-    -DBUILD_TESTING=OFF \
-    -DHWY_ENABLE_EXAMPLES=OFF \
-    -DHWY_ENABLE_TESTS=OFF
-
-print_info "Building libhwy..."
-cmake --build build --parallel $NUM_CORES
-
-print_info "Installing libhwy..."
-cmake --install build
-
-if command -v ldconfig &> /dev/null; then
-    ldconfig
-fi
-
-print_success "libhwy installed successfully"
-
-# Step 2: Build libjxl (JPEG XL support)
-print_step "Building libjxl"
-
-print_info "Cloning libjxl repository..."
-git clone --depth 1 --branch v0.10.3 https://github.com/libjxl/libjxl.git "$BUILD_DIR/libjxl"
-cd "$BUILD_DIR/libjxl"
-
-print_info "Configuring libjxl..."
-cmake -S. -Bbuild \
-    -DCMAKE_BUILD_TYPE=Release \
-    -DCMAKE_INSTALL_PREFIX="$INSTALL_PREFIX" \
-    -DCMAKE_PREFIX_PATH="$INSTALL_PREFIX" \
-    -DBUILD_TESTING=OFF \
-    -DJPEGXL_ENABLE_TOOLS=OFF \
-    -DJPEGXL_ENABLE_MANPAGES=OFF \
-    -DJPEGXL_ENABLE_BENCHMARK=OFF \
-    -DJPEGXL_ENABLE_EXAMPLES=OFF
-
-print_info "Building libjxl..."
-cmake --build build --parallel $NUM_CORES
-
-print_info "Installing libjxl..."
-cmake --install build
-
-if command -v ldconfig &> /dev/null; then
-    ldconfig
-fi
-
-print_success "libjxl installed successfully"
-
-# Step 3: Build libheif (AVIF/HEIF support)
-print_step "Building libheif"
-
-print_info "Cloning libheif repository..."
-git clone --depth 1 --branch v1.18.2 https://github.com/strukturag/libheif.git "$BUILD_DIR/libheif"
-cd "$BUILD_DIR/libheif"
-
-print_info "Configuring libheif..."
-cmake -S. -Bbuild \
-    -DCMAKE_BUILD_TYPE=Release \
-    -DCMAKE_INSTALL_PREFIX="$INSTALL_PREFIX" \
-    -DWITH_EXAMPLES=OFF \
-    -DWITH_AOM_DECODER=ON \
-    -DWITH_AOM_ENCODER=ON
-
-print_info "Building libheif..."
-cmake --build build --parallel $NUM_CORES
-
-print_info "Installing libheif..."
-cmake --install build
-
-if command -v ldconfig &> /dev/null; then
-    ldconfig
-fi
-
-print_success "libheif installed successfully"
-
-# Step 4: Build libultrahdr
+# Step 1: Build libultrahdr
 print_step "Building libultrahdr"
 
 print_info "Cloning libultrahdr repository..."
@@ -150,7 +69,7 @@ fi
 
 print_success "libultrahdr installed successfully"
 
-# Step 5: Build ImageMagick
+# Step 2: Build ImageMagick
 print_step "Building ImageMagick"
 
 print_info "Cloning ImageMagick repository..."

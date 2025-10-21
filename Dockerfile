@@ -3,25 +3,22 @@ FROM debian:latest
 # Prevent interactive prompts during package installation
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install system dependencies
+# Install system dependencies (including JXL and HEIF support)
 RUN apt-get update && apt-get install -y \
     build-essential \
     cmake \
     git \
     exiftool \
-    # ffmpeg \
+    imagemagick \
     libjpeg-dev \
     libpng-dev \
     libjpeg-turbo-progs \
-    libaom-dev \
-    libde265-dev \
-    libx265-dev \
-    libbrotli-dev \
+    libjxl-dev \
+    libheif-dev \
     autoconf \
     automake \
     libtool \
     pkg-config \
-    nasm \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
