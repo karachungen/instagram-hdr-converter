@@ -23,6 +23,7 @@ const handleFileSelect = async (event: Event) => {
 const triggerFileInput = () => {
   fileInput.value?.click()
 }
+
 </script>
 
 <template>
@@ -66,7 +67,7 @@ const triggerFileInput = () => {
       </p>
 
       <div class="mt-3 text-xs text-gray-500 dark:text-gray-400 flex items-center justify-center gap-1">
-        <UIcon name="i-lucide-info" class="flex-shrink-0" />
+        <UIcon name="i-lucide-info" class="shrink-0" />
         <span>Recommended: Keep images ≤1080px for Instagram HDR compatibility</span>
       </div>
 

@@ -1,0 +1,11 @@
+# Robots.txt for Instagram HDR Converter
+User-agent: *
+Allow: /
+Disallow: /api/
+
+# Sitemap
+Sitemap: https://hdr.karachun.by/sitemap.xml
+
+# Crawl-delay for respectful crawling
+Crawl-delay: 1
+

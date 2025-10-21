@@ -82,7 +82,7 @@ export default defineEventHandler(async (event: H3Event): Promise<ValidationResu
 async function validateJPEGHDR(filePath: string, cmdDir: string): Promise<ValidationResult> {
   try {
     const ultrahdrApp = join(cmdDir, 'ultrahdr_app')
-    const checkCmd = `cd "${cmdDir}" && ./ultrahdr_app -P "${filePath}"`
+    const checkCmd = `cd "${cmdDir}" && ./ultrahdr_app -m 1 -j "${filePath}" -P`
 
     const { stdout, stderr } = await execAsync(checkCmd, {
       maxBuffer: 1024 * 1024, // 1MB buffer
@@ -95,8 +95,8 @@ async function validateJPEGHDR(filePath: string, cmdDir: string): Promise<Valida
     const output = (stdout + stderr).toLowerCase()
 
     // Check if ultrahdr_app confirms it's an HDR image
-    const isHDR = output.includes('ultra hdr') ||
-                  output.includes('gain map') ||
+    const isHDR = output.includes('ultra hdr image: yes') ||
+                  output.includes('gainmap metadata') ||
                   output.includes('hdr image') ||
                   output.includes('ultrahdr')
 
@@ -132,13 +132,14 @@ async function validateAVIFHDR(filePath: string, cmdDir: string): Promise<Valida
     })
 
     // Parse ImageMagick output for bit depth and color space
-    const depthMatch = stdout.match(/Depth:\s*(\d+)-bit/i)
+    const depthMatch = stdout.match(/Depth:\s*(\d+)\/(\d+)-bit/i)
     const colorSpaceMatch = stdout.match(/Colorspace:\s*(\w+)/i)
 
+    // Use the first depth value (e.g., "10/16-bit" -> 10)
     const bitDepth = depthMatch ? parseInt(depthMatch[1]) : 8
     const colorSpace = colorSpaceMatch ? colorSpaceMatch[1] : 'sRGB'
 
-    // Check if it's 10-bit or higher and has proper HDR color space
+    // Check if it's 10-bit or higher for HDR
     const isHDR = bitDepth >= 10
 
     return {

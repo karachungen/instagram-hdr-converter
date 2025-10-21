@@ -33,26 +33,27 @@ function toggleLogs() {
   <header class="w-full border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950">
     <div class="px-6 py-6">
       <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div class="flex-1">
+          <div class="flex-1">
           <div class="flex items-center gap-3">
             <div
-              class="flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center"
+              class="shrink-0 w-12 h-12 rounded-xl bg-linear-to-br from-purple-500 to-pink-500 flex items-center justify-center"
+              aria-hidden="true"
             >
               <UIcon name="i-lucide-image" class="text-2xl text-white" />
             </div>
             <div>
               <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
-                Instagram HDR Converter
+                Instagram HDR Photo Converter
               </h1>
               <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                Convert AVIF & JPEG HDR to Instagram-compatible format
+                Fix dull Lightroom HDR photos • Convert to ISO 21496-1 format • For Instagram, Threads & Google Photos
               </p>
             </div>
           </div>
         </div>
 
         <!-- Right side: Status Badge & Actions -->
-        <div class="flex items-center gap-3 flex-shrink-0">
+        <div class="flex items-center gap-3 shrink-0">
           <!-- Status Badge (hidden when idle) -->
           <UBadge
             v-if="statusLabel !== 'Idle'"

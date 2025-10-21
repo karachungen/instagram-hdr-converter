@@ -6,8 +6,10 @@ Follow these steps to upload HDR photos to Instagram through the website:
 
 Choose one of these methods:
 
-#### Method 1: JXL Export (Recommended) ⭐
-**Best method to preserve original image appearance**
+#### Method 1: JXL or AVIF Export (Recommended) ⭐
+**HDR version matches the original, SDR fallback may differ from Lightroom preview**
+
+This method prioritizes accurate HDR representation. The HDR version will closely match your original image, but the SDR fallback (shown on non-HDR devices) may not match what you see in Lightroom's SDR preview.
 
 1.1. Export from Lightroom with these settings:
 - **Format:** JXL or AVIF
@@ -22,8 +24,10 @@ docker run -v $(pwd):/data karachungen/instagram-hdr-converter image-hdr.jxl
 
 This will create `image-hdr_iso.jpg` that Instagram can process.
 
-#### Method 2: JPG Export (Legacy)
-**Note: Final image may be overexposed due to incorrect HDR metadata settings in Lightroom's JPG export**
+#### Method 2: JPG Export
+**SDR version matches Lightroom preview, HDR version may be overexposed**
+
+This method prioritizes SDR compatibility. The SDR version will match what you see in Lightroom's preview, but the HDR version may appear overexposed on HDR-capable devices.
 
 2.1. Export from Lightroom with these settings:
 - **Format:** JPEG
