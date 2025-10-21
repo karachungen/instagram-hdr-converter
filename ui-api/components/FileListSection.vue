@@ -69,7 +69,7 @@ const exportMethods = ref<AccordionItem[]>([
         :disabled="filesStore.files.length === 0 || filesStore.isProcessing"
         color="primary"
         variant="solid"
-        size="lg"
+        size="xl"
         block
         @click="handleProcessAll"
       >
@@ -236,7 +236,7 @@ const exportMethods = ref<AccordionItem[]>([
               <span><strong>Select Original Ratio</strong> - don't crop the photo</span>
             </li>
             <li class="flex items-start gap-2">
-              <UIcon name="i-lucide-rulers" class="mt-0.5 shrink-0" />
+              <UIcon name="i-lucide-maximize" class="mt-0.5 shrink-0" />
               <div>
                 <strong>Keep within Instagram's supported sizes:</strong>
                 <ul class="mt-1 ml-4 space-y-0.5 text-xs">

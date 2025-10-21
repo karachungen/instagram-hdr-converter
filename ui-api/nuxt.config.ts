@@ -13,7 +13,7 @@ export default defineNuxtConfig({
 
   app: {
     head: {
-      title: 'HDR Photo Converter for Instagram & Threads - Fix Dull HDR Images | ISO 21496-1',
+      title: 'HDR Converter - Fix Dull HDR Images for Instagram & Threads | ISO 21496-1',
       titleTemplate: '%s',
       meta: [
         { charset: 'utf-8' },
@@ -26,21 +26,21 @@ export default defineNuxtConfig({
           name: 'keywords',
           content: 'HDR converter, Instagram HDR, Lightroom HDR, AVIF to HDR JPEG, ISO 21496-1, HDR gain map, Threads HDR, Google Photos HDR, dull HDR fix, HDR image converter, Ultra HDR, HDR photo upload'
         },
-        { name: 'author', content: 'Instagram HDR Converter' },
+        { name: 'author', content: 'HDR Converter' },
         { name: 'robots', content: 'index, follow' },
 
         // Open Graph / Facebook
         { property: 'og:type', content: 'website' },
-        { property: 'og:title', content: 'HDR Photo Converter for Instagram & Threads - Fix Dull HDR Images' },
+        { property: 'og:title', content: 'HDR Converter - Fix Dull HDR Images for Instagram & Threads' },
         {
           property: 'og:description',
           content: 'Convert Lightroom HDR photos to Instagram/Threads compatible format. Fix dull, washed-out images. Free ISO 21496-1 HDR converter with gain map preservation.'
         },
-        { property: 'og:site_name', content: 'Instagram HDR Converter' },
+        { property: 'og:site_name', content: 'HDR Converter' },
 
         // Twitter Card
         { name: 'twitter:card', content: 'summary_large_image' },
-        { name: 'twitter:title', content: 'HDR Photo Converter for Instagram & Threads - Fix Dull HDR Images' },
+        { name: 'twitter:title', content: 'HDR Converter - Fix Dull HDR Images for Instagram & Threads' },
         {
           name: 'twitter:description',
           content: 'Free HDR converter for Instagram, Threads & Google Photos. Convert Lightroom exports to ISO 21496-1 format. Fix dull HDR images.'
@@ -48,7 +48,7 @@ export default defineNuxtConfig({
 
         // Additional SEO
         { name: 'format-detection', content: 'telephone=no' },
-        { name: 'apple-mobile-web-app-capable', content: 'yes' },
+        { name: 'mobile-web-app-capable', content: 'yes' },
         { name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent' },
       ],
       link: [
@@ -64,11 +64,16 @@ export default defineNuxtConfig({
     },
   },
 
+  // Google Analytics configuration will be handled by @nuxtjs/google-analytics module
+
   runtimeConfig: {
+    // Private keys (only available on server-side)
+    googleAnalyticsId: process.env.GOOGLE_ANALYTICS_ID || '',
 
     // Public keys (exposed to client)
     public: {
       apiBase: '/api',
+      googleAnalyticsId: process.env.NUXT_PUBLIC_GOOGLE_ANALYTICS_ID || '',
     },
   },
 })

@@ -79,7 +79,7 @@
             class="flex items-center gap-2 hover:text-gray-900 dark:hover:text-gray-200 transition-colors"
           >
             <UIcon name="i-lucide-sparkles" class="text-lg" />
-            <span>Built with Cursor</span>
+            <span>Vibe coded by Cursor</span>
           </a>
         </div>
       </div>

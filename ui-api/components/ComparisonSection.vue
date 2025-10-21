@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import JSZip from 'jszip'
+
 const filesStore = useFilesStore()
 const toast = useToast()
 
@@ -19,7 +21,15 @@ function downloadImage(url: string, filename: string) {
 }
 
 /**
- * Handle download all images
+ * Convert blob URL to actual blob
+ */
+async function blobUrlToBlob(url: string): Promise<Blob> {
+  const response = await fetch(url)
+  return response.blob()
+}
+
+/**
+ * Handle download all images as zip
  */
 async function handleDownloadAll(): Promise<void> {
   try {
@@ -35,17 +45,44 @@ async function handleDownloadAll(): Promise<void> {
       return
     }
 
-    // Download each file individually
-    files.forEach((file) => {
+    // Show processing toast
+    toast.add({
+      title: 'Creating ZIP',
+      description: `Preparing ${files.length} file(s) for download...`,
+      color: 'primary',
+      icon: 'i-lucide-archive',
+    })
+
+    // Create zip file
+    const zip = new JSZip()
+
+    // Add each image to the zip
+    for (const file of files) {
       if (file.result?.finalJpg) {
         const baseName = file.name.replace(/\.[^/.]+$/, '')
-        downloadImage(file.result.finalJpg, `${baseName}_instagram.jpg`)
+        const timestamp = Date.now()
+        const fileName = `${baseName}_${timestamp}.jpg`
+
+        // Convert blob URL to actual blob
+        const blob = await blobUrlToBlob(file.result.finalJpg)
+        zip.file(fileName, blob)
       }
-    })
+    }
+
+    // Generate zip file
+    const zipBlob = await zip.generateAsync({ type: 'blob' })
+
+    // Create download link
+    const zipUrl = URL.createObjectURL(zipBlob)
+    const timestamp = new Date().toISOString().split('T')[0]
+    downloadImage(zipUrl, `hdr-converted-images-${timestamp}.zip`)
+
+    // Clean up
+    URL.revokeObjectURL(zipUrl)
 
     toast.add({
       title: 'Success',
-      description: `Downloaded ${files.length} image(s)`,
+      description: `Downloaded ${files.length} image(s) as ZIP`,
       color: 'success',
       icon: 'i-lucide-check-circle',
     })
@@ -80,7 +117,7 @@ async function handleDownloadAll(): Promise<void> {
         label="Download All"
         color="primary"
         variant="solid"
-        size="md"
+        size="xl"
         :disabled="completedFilesWithResults.length === 0"
         @click="handleDownloadAll"
       />
@@ -99,7 +136,7 @@ async function handleDownloadAll(): Promise<void> {
     <!-- Empty State -->
     <div v-else class="h-full flex items-center justify-center">
       <div class="text-center max-w-md px-6">
-        <div class="w-24 h-24 mx-auto mb-6 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+        <div class="w-24 h-24 mx-auto mb-6 rounded-full bg-linear-to-br from-purple-500 to-pink-500 flex items-center justify-center">
           <UIcon name="i-lucide-image" class="text-5xl text-white" />
         </div>
         <h3 class="text-2xl font-bold text-gray-900 dark:text-white mb-3">

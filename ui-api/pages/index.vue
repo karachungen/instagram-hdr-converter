@@ -14,13 +14,13 @@ const logsExpanded = computed({
 
 // SEO Meta Tags
 useSeoMeta({
-  title: 'HDR Photo Converter for Instagram & Threads - Fix Dull HDR Images | ISO 21496-1',
+  title: 'HDR Converter - Fix Dull HDR Images for Instagram & Threads | ISO 21496-1',
   description: 'Free online HDR photo converter for Instagram, Threads, and Google Photos. Convert Lightroom HDR exports (AVIF/JPEG) to ISO 21496-1 format. Fix dull, washed-out HDR images with gain map preservation. Perfect for photographers uploading HDR content.',
-  ogTitle: 'HDR Photo Converter for Instagram & Threads - Fix Dull HDR Images',
+  ogTitle: 'HDR Converter - Fix Dull HDR Images for Instagram & Threads',
   ogDescription: 'Convert Lightroom HDR photos to Instagram/Threads compatible format. Fix dull, washed-out images. Free ISO 21496-1 HDR converter with gain map preservation.',
   ogType: 'website',
   twitterCard: 'summary_large_image',
-  twitterTitle: 'HDR Photo Converter for Instagram & Threads',
+  twitterTitle: 'HDR Converter for Instagram & Threads',
   twitterDescription: 'Free HDR converter for Instagram, Threads & Google Photos. Convert Lightroom exports to ISO 21496-1 format. Fix dull HDR images.',
 })
 
@@ -32,7 +32,7 @@ useHead({
       innerHTML: JSON.stringify({
         '@context': 'https://schema.org',
         '@type': 'WebApplication',
-        'name': 'Instagram HDR Converter',
+        'name': 'HDR Converter',
         'description': 'Free HDR photo converter for Instagram, Threads, and Google Photos. Convert Lightroom HDR exports to ISO 21496-1 format.',
         'applicationCategory': 'MultimediaApplication',
         'operatingSystem': 'Any',
@@ -54,7 +54,7 @@ useHead({
         'softwareVersion': '1.0',
         'author': {
           '@type': 'Organization',
-          'name': 'Instagram HDR Converter'
+          'name': 'HDR Converter'
         }
       })
     },
@@ -96,7 +96,7 @@ useHead({
 
 // Initialize on mount
 onMounted(() => {
-  logsStore.add('Instagram HDR Converter initialized', 'success')
+  logsStore.add('HDR Converter initialized', 'success')
   logsStore.add('Upload AVIF or JPEG (HDR) files to convert to Instagram-compatible format', 'info')
   logsStore.add('Images will be validated for HDR content and optimal size (≤1080px)', 'info')
 })

@@ -26,6 +26,7 @@ export interface ProcessingFile {
   }
   sizeWarning?: boolean
   hdrInfo?: HdrValidationInfo
+  createdAt?: number // Timestamp for analytics tracking
 }
 
 // HDR validation info
@@ -82,4 +83,17 @@ export interface LogEntry {
 }
 
 // Note: UiState interface removed - state is now defined directly in the store
+
+// Google Analytics TypeScript declarations
+declare global {
+  interface Window {
+    gtag: (
+      command: 'event' | 'config' | 'set' | 'get',
+      action: string,
+      parameters?: {
+        [key: string]: any;
+      }
+    ) => void;
+  }
+}
 

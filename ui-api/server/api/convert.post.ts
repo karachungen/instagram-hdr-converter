@@ -143,6 +143,79 @@ export default defineEventHandler(async (event: H3Event): Promise<ConversionResu
         logs.push('Gain map not extracted separately (will decode on client)')
       }
 
+      // Extract HDR metadata using ultrahdr_app -f
+      logs.push('Extracting HDR metadata...')
+      try {
+        const ultrahdrApp = join(cmdDir, 'ultrahdr_app')
+        const metadataFile = join(convertedDir, `metadata_${timestamp}.txt`)
+        const metadataCmd = `cd "${cmdDir}" && "${ultrahdrApp}" -m 1 -j "${outputJpgPath}" -f "${metadataFile}"`
+
+        await execAsync(metadataCmd, {
+          maxBuffer: 1024 * 1024,
+          env: {
+            ...process.env,
+            PATH: `${cmdDir}:${process.env.PATH}`,
+          },
+        })
+
+        // Read metadata from file
+        const metadataContent = await readFile(metadataFile, 'utf-8')
+        logs.push(`Metadata extracted from file`)
+
+        // Parse metadata from file content
+        const metadata: any = {}
+        const lines = metadataContent.split('\n')
+
+        for (const line of lines) {
+          const trimmed = line.trim()
+          if (trimmed.startsWith('--maxContentBoost')) {
+            const values = trimmed.replace('--maxContentBoost', '').trim().split(/\s+/).map(Number)
+            metadata.maxContentBoost = values.length === 1 ? values[0] : values.reduce((a, b) => a + b) / values.length
+          }
+          else if (trimmed.startsWith('--minContentBoost')) {
+            const values = trimmed.replace('--minContentBoost', '').trim().split(/\s+/).map(Number)
+            metadata.minContentBoost = values.length === 1 ? values[0] : values.reduce((a, b) => a + b) / values.length
+          }
+          else if (trimmed.startsWith('--gamma')) {
+            const values = trimmed.replace('--gamma', '').trim().split(/\s+/).map(Number)
+            metadata.gamma = values.length === 1 ? values[0] : values.reduce((a, b) => a + b) / values.length
+          }
+          else if (trimmed.startsWith('--offsetSdr')) {
+            const values = trimmed.replace('--offsetSdr', '').trim().split(/\s+/).map(Number)
+            metadata.offsetSdr = values.length === 1 ? values[0] : values.reduce((a, b) => a + b) / values.length
+          }
+          else if (trimmed.startsWith('--offsetHdr')) {
+            const values = trimmed.replace('--offsetHdr', '').trim().split(/\s+/).map(Number)
+            metadata.offsetHdr = values.length === 1 ? values[0] : values.reduce((a, b) => a + b) / values.length
+          }
+          else if (trimmed.startsWith('--hdrCapacityMin')) {
+            metadata.hdrCapacityMin = Number(trimmed.replace('--hdrCapacityMin', '').trim())
+          }
+          else if (trimmed.startsWith('--hdrCapacityMax')) {
+            metadata.hdrCapacityMax = Number(trimmed.replace('--hdrCapacityMax', '').trim())
+          }
+          else if (trimmed.startsWith('--useBaseColorSpace')) {
+            metadata.useBaseColorSpace = Number(trimmed.replace('--useBaseColorSpace', '').trim())
+          }
+        }
+
+        if (Object.keys(metadata).length > 0) {
+          results.metadata = metadata
+          logs.push(`HDR metadata extracted successfully`)
+        } else {
+          logs.push('No HDR metadata found in output')
+        }
+
+        // Cleanup metadata file
+        try {
+          await rm(metadataFile, { force: true })
+        } catch {
+          // Ignore cleanup errors
+        }
+      } catch (metaError: any) {
+        logs.push(`Metadata extraction warning: ${metaError.message}`)
+      }
+
       logs.push('Conversion completed successfully!')
       logs.push(`Output saved to: ${outputJpgPath}`)
 

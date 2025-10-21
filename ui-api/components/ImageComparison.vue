@@ -20,6 +20,7 @@ const toast = useToast()
 
 
 // Fullscreen image modal state
+const isFullscreenOpen = ref(false)
 const fullscreenImage = ref<{
   type: 'comparison' | 'sdr' | 'gainmap'
   title: string
@@ -27,15 +28,6 @@ const fullscreenImage = ref<{
   originalSrc?: string
   finalSrc?: string
 } | null>(null)
-
-const isFullscreenOpen = computed({
-  get: () => !!fullscreenImage.value,
-  set: (value) => {
-    if (!value) {
-      fullscreenImage.value = null
-    }
-  },
-})
 
 /**
  * Open image in fullscreen
@@ -65,6 +57,16 @@ function openFullscreen(type: 'comparison' | 'sdr' | 'gainmap') {
       }
       break
   }
+  // Open the modal
+  isFullscreenOpen.value = true
+}
+
+/**
+ * Close fullscreen modal
+ */
+function closeFullscreen() {
+  isFullscreenOpen.value = false
+  fullscreenImage.value = null
 }
 
 const formatBytes = (bytes: number): string => {
@@ -191,7 +193,8 @@ function downloadImage(url: string, filename: string) {
 function handleDownload(): void {
   try {
     const baseName = props.fileName.replace(/\.[^/.]+$/, '')
-    const filename = `${baseName}_instagram.jpg`
+    const timestamp = Date.now()
+    const filename = `${baseName}_${timestamp}.jpg`
     downloadImage(props.result.finalJpg, filename)
 
     toast.add({
@@ -232,7 +235,7 @@ function handleDownload(): void {
       <div class="comparison-container">
         <div class="mb-3 flex items-center justify-between">
           <div class="flex items-center gap-2">
-            <UBadge color="gray" variant="soft" size="sm">
+            <UBadge color="neutral" variant="soft" size="sm">
               <UIcon name="i-lucide-arrow-left" class="mr-1" />
               Original AVIF
             </UBadge>
@@ -243,7 +246,7 @@ function handleDownload(): void {
           </div>
           <div class="flex items-center gap-2">
             <UBadge color="primary" variant="soft" size="sm">
-              Final JPG (Instagram)
+              Final JPG
               <UIcon name="i-lucide-arrow-right" class="ml-1" />
             </UBadge>
           </div>
@@ -276,7 +279,7 @@ function handleDownload(): void {
           <!-- SDR Image -->
           <div v-if="hasSdrImage" class="space-y-2">
             <div class="flex items-center gap-2">
-              <UBadge color="sky" variant="soft" size="sm">SDR Image</UBadge>
+              <UBadge color="primary" variant="soft" size="sm">SDR Image</UBadge>
             </div>
             <div class="image-wrapper group cursor-pointer relative" @click="openFullscreen('sdr')">
               <img :src="result.sdrImage" alt="SDR Image" class="display-image" />
@@ -291,7 +294,7 @@ function handleDownload(): void {
           <!-- Gain Map -->
           <div v-if="hasGainMap" class="space-y-2">
             <div class="flex items-center gap-2">
-              <UBadge color="amber" variant="soft" size="sm">Gain Map</UBadge>
+              <UBadge color="warning" variant="soft" size="sm">Gain Map</UBadge>
             </div>
             <div class="image-wrapper group cursor-pointer relative" @click="openFullscreen('gainmap')">
               <img :src="result.gainMapImage" alt="Gain Map" class="display-image" />
@@ -343,75 +346,96 @@ function handleDownload(): void {
           </div>
         </div>
 
-        <!-- HDR Metadata -->
+        <!-- HDR Metadata (Collapsible) -->
         <div v-if="result.metadata" class="pt-4 border-t border-gray-200 dark:border-gray-700">
-          <div class="flex items-center gap-2 mb-4">
-            <UIcon name="i-lucide-info" class="text-primary" />
-            <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-300">
-              HDR Gain Map Metadata
-            </h4>
-          </div>
-
-          <div class="space-y-2 text-sm max-w-2xl">
-            <div class="flex justify-between py-1 border-b border-gray-100 dark:border-gray-800">
-              <span class="text-gray-600 dark:text-gray-400">Max Content Boost</span>
-              <span class="font-medium">{{ result.metadata.maxContentBoost.toFixed(4) }}</span>
-            </div>
-            <div class="flex justify-between py-1 border-b border-gray-100 dark:border-gray-800">
-              <span class="text-gray-600 dark:text-gray-400">Min Content Boost</span>
-              <span class="font-medium">{{ result.metadata.minContentBoost.toFixed(4) }}</span>
-            </div>
-            <div class="flex justify-between py-1 border-b border-gray-100 dark:border-gray-800">
-              <span class="text-gray-600 dark:text-gray-400">Gamma</span>
-              <span class="font-medium">{{ result.metadata.gamma.toFixed(4) }}</span>
-            </div>
-            <div class="flex justify-between py-1 border-b border-gray-100 dark:border-gray-800">
-              <span class="text-gray-600 dark:text-gray-400">HDR Capacity Min</span>
-              <span class="font-medium">{{ result.metadata.hdrCapacityMin }}</span>
-            </div>
-            <div class="flex justify-between py-1 border-b border-gray-100 dark:border-gray-800">
-              <span class="text-gray-600 dark:text-gray-400">HDR Capacity Max</span>
-              <span class="font-medium">{{ result.metadata.hdrCapacityMax }}</span>
-            </div>
-            <div class="flex justify-between py-1 border-b border-gray-100 dark:border-gray-800">
-              <span class="text-gray-600 dark:text-gray-400">Offset SDR</span>
-              <span class="font-medium font-mono text-xs">{{ result.metadata.offsetSdr.toExponential(2) }}</span>
-            </div>
-            <div class="flex justify-between py-1 border-b border-gray-100 dark:border-gray-800">
-              <span class="text-gray-600 dark:text-gray-400">Offset HDR</span>
-              <span class="font-medium font-mono text-xs">{{ result.metadata.offsetHdr.toExponential(2) }}</span>
-            </div>
-            <div class="flex justify-between py-1">
-              <span class="text-gray-600 dark:text-gray-400">Base Color Space</span>
-              <span class="font-medium">{{ result.metadata.useBaseColorSpace ? 'Yes' : 'No' }}</span>
-            </div>
-          </div>
+          <UAccordion
+            :items="[{
+              label: 'HDR Gain Map Metadata',
+              icon: 'i-lucide-info',
+              slot: 'metadata'
+            }]"
+            :ui="{
+              item: 'border-none'
+            }"
+          >
+            <template #metadata>
+              <div class="space-y-2 text-sm max-w-2xl pt-2">
+                <div class="flex justify-between py-1 border-b border-gray-100 dark:border-gray-800">
+                  <span class="text-gray-600 dark:text-gray-400">Max Content Boost</span>
+                  <span class="font-medium">{{ result.metadata.maxContentBoost.toFixed(4) }}</span>
+                </div>
+                <div class="flex justify-between py-1 border-b border-gray-100 dark:border-gray-800">
+                  <span class="text-gray-600 dark:text-gray-400">Min Content Boost</span>
+                  <span class="font-medium">{{ result.metadata.minContentBoost.toFixed(4) }}</span>
+                </div>
+                <div class="flex justify-between py-1 border-b border-gray-100 dark:border-gray-800">
+                  <span class="text-gray-600 dark:text-gray-400">Gamma</span>
+                  <span class="font-medium">{{ result.metadata.gamma.toFixed(4) }}</span>
+                </div>
+                <div class="flex justify-between py-1 border-b border-gray-100 dark:border-gray-800">
+                  <span class="text-gray-600 dark:text-gray-400">HDR Capacity Min</span>
+                  <span class="font-medium">{{ result.metadata.hdrCapacityMin }}</span>
+                </div>
+                <div class="flex justify-between py-1 border-b border-gray-100 dark:border-gray-800">
+                  <span class="text-gray-600 dark:text-gray-400">HDR Capacity Max</span>
+                  <span class="font-medium">{{ result.metadata.hdrCapacityMax }}</span>
+                </div>
+                <div class="flex justify-between py-1 border-b border-gray-100 dark:border-gray-800">
+                  <span class="text-gray-600 dark:text-gray-400">Offset SDR</span>
+                  <span class="font-medium font-mono text-xs">{{ result.metadata.offsetSdr.toExponential(2) }}</span>
+                </div>
+                <div class="flex justify-between py-1 border-b border-gray-100 dark:border-gray-800">
+                  <span class="text-gray-600 dark:text-gray-400">Offset HDR</span>
+                  <span class="font-medium font-mono text-xs">{{ result.metadata.offsetHdr.toExponential(2) }}</span>
+                </div>
+                <div class="flex justify-between py-1">
+                  <span class="text-gray-600 dark:text-gray-400">Base Color Space</span>
+                  <span class="font-medium">{{ result.metadata.useBaseColorSpace ? 'Yes' : 'No' }}</span>
+                </div>
+              </div>
+            </template>
+          </UAccordion>
         </div>
       </div>
     </template>
   </UCard>
 
   <!-- Fullscreen Image Modal -->
-  <UModal v-model="isFullscreenOpen" :fullscreen="true" :title="fullscreenImage?.title" :ui="{ body: { padding: '' } }">
+  <UModal v-model:open="isFullscreenOpen" :fullscreen="true" :close="false" :ui="{
+  content: '!p-0 fullscreen-modal',
+    body: '!p-0',
+    header: 'hidden',
+    wrapper: '!p-0 fullscreen-modal'
+  }" @close="closeFullscreen">
     <template #body>
-      <div class="h-full flex items-center justify-center bg-black p-4">
+      <div class="h-screen w-screen flex items-center justify-center bg-black relative">
+        <!-- Close Button Overlay -->
+        <button
+          class="absolute top-4 right-4 z-50 p-2 rounded-full bg-black/50 hover:bg-black/70 transition-colors backdrop-blur-sm"
+          aria-label="Close fullscreen" @click="closeFullscreen">
+          <UIcon name="i-lucide-x" class="text-white text-2xl" />
+        </button>
+
         <!-- Comparison Slider in Fullscreen -->
         <div v-if="fullscreenImage?.type === 'comparison'" class="w-full h-full flex items-center justify-center">
-          <img-comparison-slider class="w-full h-full">
+          <img-comparison-slider class="">
             <img slot="first" :src="fullscreenImage.originalSrc" alt="Original AVIF HDR"
-              class="w-full h-full object-contain" />
+              class="w-auto h-auto" />
             <img slot="second" :src="fullscreenImage.finalSrc" alt="Converted JPG HDR"
-              class="w-full h-full object-contain" />
+              class="w-auto h-auto" />
           </img-comparison-slider>
         </div>
 
         <!-- Single Image in Fullscreen -->
-        <img v-else-if="fullscreenImage?.src" :src="fullscreenImage.src" :alt="fullscreenImage.title"
+        <img v-else-if="fullscreenImage?.src" :src="fullscreenImage.src" :alt="fullscreenImage?.title"
           class="max-w-full max-h-full object-contain" />
       </div>
     </template>
   </UModal>
 </template>
+
+
+
 
 <style scoped>
 .comparison-container {
@@ -508,3 +532,4 @@ function handleDownload(): void {
   }
 }
 </style>
+

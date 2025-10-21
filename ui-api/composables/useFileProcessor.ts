@@ -8,6 +8,18 @@ interface UseFileProcessorReturn {
 }
 
 /**
+ * Track Google Analytics events for HDR conversion
+ */
+function trackGAAnalytics(eventName: string, parameters?: Record<string, any>) {
+  if (typeof window !== 'undefined' && window.gtag) {
+    window.gtag('event', eventName, {
+      custom_parameter_1: 'hdr_converter',
+      ...parameters,
+    })
+  }
+}
+
+/**
  * Composable for managing file processing operations via API
  * Handles file upload, validation, API conversion, and state management
  */
@@ -129,6 +141,12 @@ export function useFileProcessor(): UseFileProcessorReturn {
     const fileArray = Array.from(fileList)
     logsStore.add(`Adding ${fileArray.length} file(s) to list...`, 'info')
 
+    // Track file upload event
+    trackGAAnalytics('file_upload_start', {
+      file_count: fileArray.length,
+      event_category: 'file_management',
+    })
+
     const sizeWarnings: string[] = []
     const hdrWarnings: string[] = []
 
@@ -150,6 +168,7 @@ export function useFileProcessor(): UseFileProcessorReturn {
         status: 'pending',
         error: null,
         progress: 0,
+        createdAt: Date.now(), // For analytics tracking
       }
 
       filesStore.addFile(fileObj)
@@ -224,7 +243,6 @@ export function useFileProcessor(): UseFileProcessorReturn {
         description: `${sizeWarnings.length} image(s) exceed 1080px. Instagram may resize and remove HDR gain map.`,
         icon: 'i-lucide-alert-triangle',
         color: 'warning',
-        timeout: 8000,
       })
     }
 
@@ -235,7 +253,6 @@ export function useFileProcessor(): UseFileProcessorReturn {
         description: `${hdrWarnings.length} image(s) are not HDR. Processing may not produce proper HDR output.`,
         icon: 'i-lucide-alert-circle',
         color: 'error',
-        timeout: 10000,
       })
     }
   }
@@ -386,8 +403,8 @@ export function useFileProcessor(): UseFileProcessorReturn {
 
       // Use provided gain map or placeholder
       let gainMapUrl: string
-      if (response.gainMapImage) {
-        gainMapUrl = base64ToBlob(response.gainMapImage, 'image/jpeg')
+      if (response.gainMap) {
+        gainMapUrl = base64ToBlob(response.gainMap, 'image/jpeg')
         logsStore.add('Using server-extracted gain map', 'info')
       } else {
         // Create placeholder or empty image
@@ -412,6 +429,15 @@ export function useFileProcessor(): UseFileProcessorReturn {
         result,
       })
 
+      // Track successful conversion
+      trackGAAnalytics('hdr_conversion_success', {
+        file_type: fileObj.name.toLowerCase().includes('.avif') ? 'avif' : 'jpeg',
+        file_size: Math.round(fileObj.size / 1024), // KB
+        conversion_time: Date.now() - (fileObj.createdAt || Date.now()),
+        event_category: 'hdr_conversion',
+        value: 1,
+      })
+
       logsStore.add(`[${index + 1}/${total}] ✅ Completed: ${fileObj.name}`, 'success')
     } catch (error: any) {
       const errorMsg = error?.message || error?.data?.message || 'Unknown error'
@@ -421,6 +447,13 @@ export function useFileProcessor(): UseFileProcessorReturn {
         status: 'error',
         error: errorMsg,
         progress: 0,
+      })
+
+      // Track conversion error
+      trackGAAnalytics('hdr_conversion_error', {
+        file_type: fileObj.name.toLowerCase().includes('.avif') ? 'avif' : 'jpeg',
+        error_message: errorMsg.substring(0, 100), // Limit error message length
+        event_category: 'hdr_conversion',
       })
 
       throw error
@@ -459,6 +492,12 @@ export function useFileProcessor(): UseFileProcessorReturn {
     logsStore.add('=== Starting Batch Processing ===', 'info')
     logsStore.add(`Processing ${readyFiles.length} file(s)...`, 'info')
 
+    // Track batch processing start
+    trackGAAnalytics('batch_conversion_start', {
+      file_count: readyFiles.length,
+      event_category: 'hdr_conversion',
+    })
+
     filesStore.setProcessing(true)
     let successCount = 0
     let errorCount = 0
@@ -481,6 +520,16 @@ export function useFileProcessor(): UseFileProcessorReturn {
     if (errorCount > 0) {
       logsStore.add(`✗ Errors: ${errorCount} file(s)`, 'error')
     }
+
+    // Track batch completion
+    trackGAAnalytics('batch_conversion_complete', {
+      total_files: readyFiles.length,
+      successful_conversions: successCount,
+      failed_conversions: errorCount,
+      success_rate: Math.round((successCount / readyFiles.length) * 100),
+      event_category: 'hdr_conversion',
+      value: successCount,
+    })
 
     toast.add({
       title: 'Processing Complete',

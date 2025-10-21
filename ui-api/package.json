@@ -18,6 +18,7 @@
     "@nuxt/ui": "^4.0.0",
     "@pinia/nuxt": "^0.5.1",
     "img-comparison-slider": "^8.0.6",
+    "jszip": "^3.10.1",
     "pinia": "^2.1.7",
     "vue": "^3.4.21"
   },
