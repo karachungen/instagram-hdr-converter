@@ -22,45 +22,11 @@ RUN apt-get update && apt-get install -y \
 # Set working directory
 WORKDIR /app
 
-# Clone and build libultrahdr
-RUN git clone https://github.com/google/libultrahdr /tmp/libultrahdr && \
-    cd /tmp/libultrahdr && \
-    cmake -S. -Bbuild \
-        -DCMAKE_BUILD_TYPE=Release \
-        -DCMAKE_INSTALL_PREFIX=/usr/local \
-        -DUHDR_BUILD_TESTS=OFF \
-        -DUHDR_BUILD_BENCHMARK=OFF \
-        -DUHDR_BUILD_EXAMPLES=ON \
-        -DUHDR_ENABLE_LOGS=OFF \
-        -DUHDR_WRITE_XMP=1 && \
-    cmake --build build --parallel $(nproc) && \
-    cmake --install build && \
-    ldconfig && \
-    rm -rf /tmp/libultrahdr
-
-# Clone and build ImageMagick with UHDR support
-RUN git clone --depth 1 https://github.com/ImageMagick/ImageMagick.git /tmp/ImageMagick && \
-    cd /tmp/ImageMagick && \
-    autoreconf -fiv && \
-    PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH \
-    CPPFLAGS="-I/usr/local/include" \
-    LDFLAGS="-L/usr/local/lib" \
-    ./configure \
-        --prefix=/usr/local \
-        --with-uhdr=yes \
-        --enable-shared \
-        --disable-static \
-        --without-modules \
-        --disable-opencl \
-        --with-quantum-depth=16 \
-        --with-jpeg=yes \
-        --with-png=yes \
-        --without-perl \
-        --without-x && \
-    make -j$(nproc) && \
-    make install && \
-    ldconfig && \
-    rm -rf /tmp/ImageMagick
+# Copy and run unified build script
+COPY build-docker.sh /tmp/build-docker.sh
+RUN chmod +x /tmp/build-docker.sh && \
+    INSTALL_PREFIX=/usr/local NUM_CORES=$(nproc) /tmp/build-docker.sh && \
+    rm /tmp/build-docker.sh
 
 # Copy scripts and configuration files
 COPY convert-to-iso-hdr.sh /usr/local/bin/convert-to-iso-hdr.sh

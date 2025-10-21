@@ -3,7 +3,9 @@ version: '3.8'
 services:
   # Web UI service
   ui:
-    build: ./ui
+    build:
+      context: .
+      dockerfile: ui-api/Dockerfile
     image: karachungen/hdr-converter-ui:latest
     container_name: hdr-converter-ui
     ports:
