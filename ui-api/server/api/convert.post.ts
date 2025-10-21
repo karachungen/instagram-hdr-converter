@@ -69,41 +69,29 @@ export default defineEventHandler(async (event: H3Event): Promise<ConversionResu
 
       let outputJpgBuffer: Buffer
 
-      if (isJPEG) {
-        // For JPEG files, check if it's already HDR and pass through or re-encode
-        logs.push('Input is JPEG HDR - validating and processing...')
+      // Process both JPEG and AVIF through the conversion script
+      const fileTypeLabel = isJPEG ? 'JPEG HDR' : 'AVIF'
+      logs.push(`Starting ${fileTypeLabel} to Instagram-compatible HDR JPEG conversion...`)
 
-        // If it's already an HDR JPEG, we can optionally just pass it through
-        // or re-encode it to ensure Instagram compatibility
-        // For now, we'll pass it through if it's already HDR
-        outputJpgBuffer = fileData
-        logs.push(`Using original JPEG HDR: ${outputJpgBuffer.length} bytes`)
+      const convertCmd = `cd "${cmdDir}" && bash "${convertScript}" -o "${outputJpgPath}" "${inputPath}"`
+      logs.push(`Executing: ${convertCmd}`)
 
-        // Save as output for gain map extraction
-        await writeFile(outputJpgPath, outputJpgBuffer)
-      } else {
-        // Convert AVIF to HDR JPEG using ImageMagick with UHDR support
-        logs.push('Starting AVIF to HDR JPEG conversion with ImageMagick...')
-        const convertCmd = `cd "${cmdDir}" && bash "${convertScript}" -o "${outputJpgPath}" "${inputPath}"`
-        logs.push(`Executing: ${convertCmd}`)
+      const { stdout: convertStdout, stderr: convertStderr } = await execAsync(convertCmd, {
+        maxBuffer: 10 * 1024 * 1024, // 10MB buffer
+        env: {
+          ...process.env,
+          PATH: `${cmdDir}:${process.env.PATH}`,
+        },
+      })
 
-        const { stdout: convertStdout, stderr: convertStderr } = await execAsync(convertCmd, {
-          maxBuffer: 10 * 1024 * 1024, // 10MB buffer
-          env: {
-            ...process.env,
-            PATH: `${cmdDir}:${process.env.PATH}`,
-          },
-        })
+      if (convertStdout) logs.push(`Conversion stdout: ${convertStdout.trim()}`)
+      if (convertStderr) logs.push(`Conversion stderr: ${convertStderr.trim()}`)
 
-        if (convertStdout) logs.push(`Conversion stdout: ${convertStdout.trim()}`)
-        if (convertStderr) logs.push(`Conversion stderr: ${convertStderr.trim()}`)
+      logs.push(`Output file: ${outputJpgPath}`)
 
-        logs.push(`Output file: ${outputJpgPath}`)
-
-        // Read converted JPG
-        outputJpgBuffer = await readFile(outputJpgPath)
-        logs.push(`Converted JPG size: ${outputJpgBuffer.length} bytes`)
-      }
+      // Read converted JPG
+      outputJpgBuffer = await readFile(outputJpgPath)
+      logs.push(`Converted ${fileTypeLabel} size: ${outputJpgBuffer.length} bytes`)
 
       // Extract gain map as separate image using exiftool
       logs.push('Attempting to extract gain map image...')
