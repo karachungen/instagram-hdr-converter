@@ -14,7 +14,7 @@
               Why Your HDR Photos Look Dull on Instagram
             </h2>
             <p class="text-gray-600 dark:text-gray-400 leading-relaxed mb-3">
-              When you export <strong>HDR photos from Lightroom</strong> as AVIF or JXL and upload them to <strong>Instagram, Threads, or Google Photos</strong>, they often appear washed out or dull. This happens because these platforms require images in the <strong>ISO 21496-1 HDR format</strong> with proper gain map metadata.
+              When you export <strong>HDR photos from Lightroom</strong> as AVIF and upload them to <strong>Instagram, Threads, or Google Photos</strong>, they often appear washed out or dull. This happens because these platforms require images in the <strong>ISO 21496-1 HDR format</strong> with proper gain map metadata.
             </p>
             <p class="text-gray-600 dark:text-gray-400 leading-relaxed">
               Our free converter transforms your Lightroom HDR exports into Instagram-compatible HDR JPEGs, preserving the full dynamic range and vibrant colors your photos deserve.

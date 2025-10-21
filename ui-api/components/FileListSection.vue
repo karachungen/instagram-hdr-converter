@@ -20,7 +20,7 @@ async function handleProcessAll(): Promise<void> {
 // Export instructions accordion
 const exportMethods = ref<AccordionItem[]>([
   {
-    label: 'Method 1: JXL or AVIF Export (Recommended)',
+    label: 'Method 1: AVIF Export (Recommended)',
     icon: 'i-lucide-star',
     value: '0',
     slot: 'method1'
@@ -109,7 +109,7 @@ const exportMethods = ref<AccordionItem[]>([
           body: 'text-sm'
         }"
       >
-        <!-- Method 1: JXL or AVIF Export -->
+        <!-- Method 1: AVIF Export -->
         <template #method1>
           <div class="space-y-4">
             <UAlert
@@ -128,7 +128,7 @@ const exportMethods = ref<AccordionItem[]>([
                   <ul class="space-y-1.5 text-sm text-gray-600 dark:text-gray-400">
                     <li class="flex items-center gap-2">
                       <UIcon name="i-lucide-check" class="text-green-500" />
-                      <span><strong>Format:</strong> JXL or AVIF</span>
+                      <span><strong>Format:</strong> AVIF</span>
                     </li>
                     <li class="flex items-center gap-2">
                       <UIcon name="i-lucide-check" class="text-green-500" />

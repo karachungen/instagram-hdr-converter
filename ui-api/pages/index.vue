@@ -77,7 +77,7 @@ useHead({
             'name': 'How do I convert Lightroom HDR photos for Instagram?',
             'acceptedAnswer': {
               '@type': 'Answer',
-              'text': 'Export your photos from Lightroom as JXL or AVIF with HDR Output enabled, then use this converter to transform them into Instagram-compatible ISO 21496-1 HDR JPEG format with preserved gain maps.'
+              'text': 'Export your photos from Lightroom as AVIF with HDR Output enabled, then use this converter to transform them into Instagram-compatible ISO 21496-1 HDR JPEG format with preserved gain maps.'
             }
           },
           {
