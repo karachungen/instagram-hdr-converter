@@ -12,10 +12,15 @@ RUN apt-get update && apt-get install -y \
     git \
     libjpeg-dev \
     libpng-dev \
+    libaom-dev \
+    libde265-dev \
+    libx265-dev \
+    libbrotli-dev \
     autoconf \
     automake \
     libtool \
     pkg-config \
+    nasm \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy and run unified build script
@@ -60,6 +65,10 @@ RUN apt-get update && \
     libjpeg62-turbo \
     libpng16-16 \
     libgomp1 \
+    libaom3 \
+    libde265-0 \
+    libx265-199 \
+    libbrotli1 \
     nginx \
     supervisor \
     curl \
@@ -73,11 +82,14 @@ COPY --from=builder /app/.output ./output
 # Create symlink for static files (nginx will serve from /app/dist)
 RUN ln -s /app/output/public /app/dist
 
-# Copy ImageMagick binaries and libraries from magick-builder
+# Copy ImageMagick binaries and all required libraries from magick-builder
 COPY --from=magick-builder /usr/local/bin/magick /app/output/server/cmd/magick
 COPY --from=magick-builder /usr/local/bin/ultrahdr_app /app/output/server/cmd/ultrahdr_app
 COPY --from=magick-builder /usr/local/lib/libMagick*.so* /usr/local/lib/
 COPY --from=magick-builder /usr/local/lib/libuhdr.so* /usr/local/lib/
+COPY --from=magick-builder /usr/local/lib/libjxl*.so* /usr/local/lib/
+COPY --from=magick-builder /usr/local/lib/libheif.so* /usr/local/lib/
+COPY --from=magick-builder /usr/local/lib/libhwy.so* /usr/local/lib/
 COPY --from=magick-builder /usr/local/etc/ImageMagick-7 /usr/local/etc/ImageMagick-7
 
 # Copy conversion scripts and config to server directory

@@ -1,11 +1,19 @@
 name: Build and Push UI Docker Image
 
+# Required secrets (configure in repository settings):
+# - DOCKER_USERNAME: Docker Hub username
+# - DOCKER_PASSWORD: Docker Hub password or access token
+
 on:
   push:
     branches:
       - main # Trigger on pushes to the main branch
     paths:
-      - 'ui/**' # Only trigger when UI files change
+      - 'Dockerfile.ui' # UI Dockerfile
+      - 'ui-api/**' # UI source files
+      - 'build-docker.sh' # Shared build script
+      - 'convert-to-iso-hdr.sh' # Shared conversion script
+      - 'hdr-config.cfg' # Shared HDR config
       - '.github/workflows/push-ui-docker-to-registry.yml'
 
 jobs:
@@ -30,8 +38,11 @@ jobs:
       - name: Build and push UI Docker image
         uses: docker/build-push-action@v6
         with:
-          context: ./ui # Path to UI Dockerfile context
+          context: . # Root directory context (required for shared files)
+          file: ./Dockerfile.ui # UI Dockerfile
           push: true
           platforms: linux/amd64,linux/arm64
           tags: karachungen/hdr-converter-ui:latest
+          cache-from: type=registry,ref=karachungen/hdr-converter-ui:buildcache
+          cache-to: type=registry,ref=karachungen/hdr-converter-ui:buildcache,mode=max
 

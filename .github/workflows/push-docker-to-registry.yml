@@ -1,15 +1,19 @@
 name: Build and Push CLI Docker Image
 
+# Required secrets (configure in repository settings):
+# - DOCKER_USERNAME: Docker Hub username
+# - DOCKER_PASSWORD: Docker Hub password or access token
+
 on:
   push:
     branches:
       - main # Trigger on pushes to the main branch
     paths:
       - 'Dockerfile'
+      - 'build-docker.sh'
       - 'convert-to-iso-hdr.sh'
       - 'hdr-config.cfg'
       - 'entrypoint.sh'
-      - 'build.sh'
       - '.github/workflows/push-docker-to-registry.yml'
 
 jobs:
@@ -34,9 +38,12 @@ jobs:
       - name: Build and push CLI Docker image
         uses: docker/build-push-action@v6
         with:
-          context: . # Path to your Dockerfile context
+          context: . # Root directory context
+          file: ./Dockerfile # CLI Dockerfile
           push: true
           platforms: linux/amd64,linux/arm64
           tags: |
             karachungen/instagram-hdr-converter:latest
             karachungen/hdr-converter-cli:latest
+          cache-from: type=registry,ref=karachungen/hdr-converter-cli:buildcache
+          cache-to: type=registry,ref=karachungen/hdr-converter-cli:buildcache,mode=max

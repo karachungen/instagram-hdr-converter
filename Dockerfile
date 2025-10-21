@@ -13,10 +13,15 @@ RUN apt-get update && apt-get install -y \
     libjpeg-dev \
     libpng-dev \
     libjpeg-turbo-progs \
+    libaom-dev \
+    libde265-dev \
+    libx265-dev \
+    libbrotli-dev \
     autoconf \
     automake \
     libtool \
     pkg-config \
+    nasm \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
