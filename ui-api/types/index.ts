@@ -32,7 +32,7 @@ export interface ProcessingFile {
 // HDR validation info
 export interface HdrValidationInfo {
   isHDR: boolean
-  fileType: 'jpeg' | 'avif'
+  fileType: 'jpeg'
   bitDepth?: number
   colorSpace?: string
   details?: string
@@ -52,7 +52,7 @@ export interface ConversionResult {
 // Processing result for UI display
 export interface ProcessResult {
   success: boolean
-  originalImage: string // Blob URL for original AVIF
+  originalImage: string // Blob URL for the uploaded source image
   finalJpg: string // Blob URL for final JPG
   sdrImage: string // Blob URL for SDR extraction
   gainMapImage: string // Blob URL for gain map

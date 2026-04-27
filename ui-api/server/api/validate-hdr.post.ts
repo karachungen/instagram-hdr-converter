@@ -9,7 +9,7 @@ const execAsync = promisify(exec)
 
 interface ValidationResult {
   isHDR: boolean
-  fileType: 'jpeg' | 'avif'
+  fileType: 'jpeg'
   bitDepth?: number
   colorSpace?: string
   error?: string
@@ -28,10 +28,9 @@ export default defineEventHandler(async (event: H3Event): Promise<ValidationResu
 
     const fileName = file.name.toLowerCase()
     const isJPEG = fileName.endsWith('.jpg') || fileName.endsWith('.jpeg')
-    const isAVIF = fileName.endsWith('.avif')
 
-    if (!isJPEG && !isAVIF) {
-      throw new Error('Only JPEG and AVIF files are supported')
+    if (!isJPEG) {
+      throw new Error('Only JPEG files are supported')
     }
 
     // Read file data
@@ -45,19 +44,12 @@ export default defineEventHandler(async (event: H3Event): Promise<ValidationResu
     await mkdir(tempDir, { recursive: true })
 
     const timestamp = Date.now()
-    const tempFilePath = join(tempDir, `validate_${timestamp}${isJPEG ? '.jpg' : '.avif'}`)
+    const tempFilePath = join(tempDir, `validate_${timestamp}.jpg`)
 
     try {
       // Save file temporarily
       await writeFile(tempFilePath, fileData)
-
-      if (isJPEG) {
-        // Validate JPEG HDR using ultrahdr_app -P
-        return await validateJPEGHDR(tempFilePath, cmdDir)
-      } else {
-        // Validate AVIF HDR (check for 10-bit)
-        return await validateAVIFHDR(tempFilePath, cmdDir)
-      }
+      return await validateJPEGHDR(tempFilePath, cmdDir)
     } finally {
       // Cleanup
       try {
@@ -114,50 +106,3 @@ async function validateJPEGHDR(filePath: string, cmdDir: string): Promise<Valida
     }
   }
 }
-
-/**
- * Validate AVIF is 10-bit HDR using ImageMagick
- */
-async function validateAVIFHDR(filePath: string, cmdDir: string): Promise<ValidationResult> {
-  try {
-    const magickPath = join(cmdDir, 'magick')
-    const identifyCmd = `cd "${cmdDir}" && ./magick identify -verbose "${filePath}"`
-
-    const { stdout } = await execAsync(identifyCmd, {
-      maxBuffer: 2 * 1024 * 1024, // 2MB buffer
-      env: {
-        ...process.env,
-        PATH: `${cmdDir}:${process.env.PATH}`,
-      },
-    })
-
-    // Parse ImageMagick output for bit depth and color space
-    const depthMatch = stdout.match(/Depth:\s*(\d+)\/(\d+)-bit/i)
-    const colorSpaceMatch = stdout.match(/Colorspace:\s*(\w+)/i)
-
-    // Use the first depth value (e.g., "10/16-bit" -> 10)
-    const bitDepth = depthMatch ? parseInt(depthMatch[1]) : 8
-    const colorSpace = colorSpaceMatch ? colorSpaceMatch[1] : 'sRGB'
-
-    // Check if it's 10-bit or higher for HDR
-    const isHDR = bitDepth >= 10
-
-    return {
-      isHDR,
-      fileType: 'avif',
-      bitDepth,
-      colorSpace,
-      details: isHDR
-        ? `${bitDepth}-bit HDR AVIF (${colorSpace})`
-        : `${bitDepth}-bit SDR AVIF - needs 10-bit or higher for HDR`,
-    }
-  } catch (error: any) {
-    return {
-      isHDR: false,
-      fileType: 'avif',
-      error: 'Failed to analyze AVIF metadata',
-      details: error.message,
-    }
-  }
-}
-

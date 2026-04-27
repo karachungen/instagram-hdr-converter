@@ -2,11 +2,9 @@
 set -e
 
 # Entrypoint script for HDR ISO conversion
-# Supports JXL, AVIF, and HDR JPEG input formats
-# Usage: docker run hdr-iso-converter photo.jxl
-#        docker run hdr-iso-converter photo.avif
-#        docker run hdr-iso-converter photo.jpg
-#        docker run hdr-iso-converter -o output.jpg photo.jxl
+# HDR JPEG input only (Ultra HDR / gain map)
+# Usage: docker run hdr-iso-converter photo.jpg
+#        docker run hdr-iso-converter -o output.jpg photo.jpg
 
 # Colors for output
 RED='\033[0;31m'
@@ -31,25 +29,19 @@ if [ $# -eq 0 ]; then
     cat << 'EOF'
 HDR ISO Converter Docker Container
 
-Converts HDR images (JXL, AVIF, or HDR JPEG) to Instagram-compatible ISO 21496-1 format.
+Converts HDR JPEG (with gain map) to Instagram-compatible ISO 21496-1 format.
 
 USAGE:
-  # Convert JXL to ISO HDR (recommended)
-  docker run -v $(pwd):/data hdr-iso-converter photo.jxl
-  
-  # Convert AVIF to ISO HDR
-  docker run -v $(pwd):/data hdr-iso-converter photo.avif
-  
   # Convert HDR JPEG to ISO HDR
   docker run -v $(pwd):/data hdr-iso-converter photo.jpg
-  
+
   # Convert with custom output name
-  docker run -v $(pwd):/data hdr-iso-converter -o instagram.jpg photo.jxl
-  
+  docker run -v $(pwd):/data hdr-iso-converter -o instagram.jpg photo.jpg
+
   # Convert with quality setting
-  docker run -v $(pwd):/data hdr-iso-converter -q 98 photo.avif
-  
-  # Convert HDR JPEG with custom metadata (JXL/AVIF not supported)
+  docker run -v $(pwd):/data hdr-iso-converter -q 98 photo.jpg
+
+  # Convert HDR JPEG with custom metadata
   docker run -v $(pwd):/data hdr-iso-converter -f metadata.cfg photo.jpg
   
   # Run other tools
@@ -60,16 +52,14 @@ USAGE:
   # Interactive shell
   docker run -it -v $(pwd):/data hdr-iso-converter bash
 
-SUPPORTED FORMATS:
-  - JXL (JPEG XL with HDR) - Recommended for best quality
-  - AVIF (AV1 Image File Format with HDR) - Modern format
-  - HDR JPEG (with gain map) - Legacy format
+SUPPORTED INPUT:
+  - HDR JPEG (.jpg / .jpeg) with gain map (e.g. Lightroom HDR export)
 
 AVAILABLE TOOLS:
-  - magick            : ImageMagick with Ultra HDR support
+  - magick            : System ImageMagick (if installed in the image)
   - ultrahdr_app      : Google's Ultra HDR tool
   - exiftool          : Image metadata tool
-  - convert-to-iso-hdr.sh : Full conversion script (auto-detects format)
+  - convert-to-iso-hdr.sh : Full conversion script (JPEG in → ISO HDR JPEG out)
 EOF
     exit 0
 fi
@@ -149,4 +139,3 @@ fi
 
 print_info "Converting: $INPUT_FILE → ${OUTPUT_FILE:-${INPUT_FILE%.*}_iso.jpg}"
 exec /app/convert-to-iso-hdr.sh "${EXTRA_ARGS[@]}" "$INPUT_FILE"
-

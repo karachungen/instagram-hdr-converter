@@ -2,7 +2,7 @@
 <script setup lang="ts">
 /**
  * Image Comparison Component
- * Displays original AVIF vs final JPG, with SDR and Gain map below
+ * Displays original input vs final JPG, with SDR and Gain map below
  */
 
 import type { HdrMetadata, ProcessResult } from '~/types'
@@ -230,14 +230,14 @@ function handleDownload(): void {
       </div>
     </template>
 
-    <!-- Main Comparison: Original AVIF vs Final JPG with Interactive Slider -->
+    <!-- Main Comparison: Original vs final JPG with interactive slider -->
     <div class="space-y-6">
       <div class="comparison-container">
         <div class="mb-3 flex items-center justify-between">
           <div class="flex items-center gap-2">
             <UBadge color="neutral" variant="soft" size="sm">
               <UIcon name="i-lucide-arrow-left" class="mr-1" />
-              Original AVIF
+              Original (HDR JPEG)
             </UBadge>
           </div>
           <div class="text-xs text-gray-500 dark:text-gray-400">
@@ -255,7 +255,7 @@ function handleDownload(): void {
         <div class="slider-wrapper relative group cursor-pointer" @click="openFullscreen('comparison')">
           <ImgComparisonSlider class="slider-container">
             <!-- eslint-disable -->
-            <img slot="first" :src="result.originalImage" alt="Original AVIF HDR" class="slider-image" />
+            <img slot="first" :src="result.originalImage" alt="Original HDR JPEG" class="slider-image" />
             <img slot="second" :src="result.finalJpg" alt="Converted JPG HDR (Instagram Compatible)"
               class="slider-image" />
             <!-- eslint-enable -->
@@ -316,7 +316,7 @@ function handleDownload(): void {
         <div class="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
           <div class="stat-item">
             <div class="stat-label">
-              Original Size (AVIF)
+              Original Size (JPEG)
             </div>
             <div class="stat-value">
               {{ formatBytes(result.originalSize) }}
@@ -419,7 +419,7 @@ function handleDownload(): void {
         <!-- Comparison Slider in Fullscreen -->
         <div v-if="fullscreenImage?.type === 'comparison'" class="w-full h-full flex items-center justify-center">
           <img-comparison-slider class="">
-            <img slot="first" :src="fullscreenImage.originalSrc" alt="Original AVIF HDR"
+            <img slot="first" :src="fullscreenImage.originalSrc" alt="Original HDR JPEG"
               class="w-auto h-auto" />
             <img slot="second" :src="fullscreenImage.finalSrc" alt="Converted JPG HDR"
               class="w-auto h-auto" />

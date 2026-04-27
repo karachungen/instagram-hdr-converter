@@ -1,7 +1,7 @@
 # ============================================
-# Stage 1: Build ImageMagick and libultrahdr
+# Stage 1: Build libultrahdr (ultrahdr_app)
 # ============================================
-FROM debian:bookworm AS magick-builder
+FROM debian:bookworm AS ultrahdr-builder
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -12,12 +12,6 @@ RUN apt-get update && apt-get install -y \
     git \
     libjpeg-dev \
     libpng-dev \
-    libjxl-dev \
-    libheif-dev \
-    autoconf \
-    automake \
-    libtool \
-    pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy and run unified build script
@@ -63,8 +57,6 @@ RUN apt-get update && \
     libjpeg62-turbo \
     libpng16-16 \
     libgomp1 \
-    libjxl0.7 \
-    libheif1 \
     nginx \
     supervisor \
     curl \
@@ -78,13 +70,9 @@ COPY --from=builder /app/.output ./output
 # Create symlink for static files (nginx will serve from /app/dist)
 RUN ln -s /app/output/public /app/dist
 
-# Copy ImageMagick and libultrahdr binaries from magick-builder
-# Note: JXL and HEIF support comes from system packages
-COPY --from=magick-builder /usr/local/bin/magick /app/output/server/cmd/magick
-COPY --from=magick-builder /usr/local/bin/ultrahdr_app /app/output/server/cmd/ultrahdr_app
-COPY --from=magick-builder /usr/local/lib/libMagick*.so* /usr/local/lib/
-COPY --from=magick-builder /usr/local/lib/libuhdr.so* /usr/local/lib/
-COPY --from=magick-builder /usr/local/etc/ImageMagick-7 /usr/local/etc/ImageMagick-7
+# Copy libultrahdr binary and libs from ultrahdr-builder
+COPY --from=ultrahdr-builder /usr/local/bin/ultrahdr_app /app/output/server/cmd/ultrahdr_app
+COPY --from=ultrahdr-builder /usr/local/lib/libuhdr.so* /usr/local/lib/
 
 # Copy conversion scripts and config to server directory
 COPY convert-to-iso-hdr.sh /app/output/server/cmd/convert-to-iso-hdr.sh
@@ -92,7 +80,7 @@ COPY hdr-config.cfg /app/output/server/cmd/hdr-config.cfg
 
 # Update library cache and set permissions
 RUN ldconfig && \
-    chmod +x /app/output/server/cmd/convert-to-iso-hdr.sh /app/output/server/cmd/magick /app/output/server/cmd/ultrahdr_app
+    chmod +x /app/output/server/cmd/convert-to-iso-hdr.sh /app/output/server/cmd/ultrahdr_app
 
 # Configure Nginx for static files with compression
 RUN rm -f /etc/nginx/sites-enabled/default

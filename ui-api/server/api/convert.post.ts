@@ -18,13 +18,13 @@ export default defineEventHandler(async (event: H3Event): Promise<ConversionResu
       throw new Error('No file uploaded')
     }
 
-    // Validate file type (AVIF or JPEG)
+    // Validate file type (JPEG only)
     const fileName = file.name || 'input'
-    const isAVIF = fileName.toLowerCase().endsWith('.avif')
-    const isJPEG = fileName.toLowerCase().endsWith('.jpg') || fileName.toLowerCase().endsWith('.jpeg')
+    const lower = fileName.toLowerCase()
+    const isJPEG = lower.endsWith('.jpg') || lower.endsWith('.jpeg')
 
-    if (!isAVIF && !isJPEG) {
-      throw new Error('Only AVIF and JPEG files are supported')
+    if (!isJPEG) {
+      throw new Error('Only JPEG files are supported')
     }
 
     // Read file data
@@ -44,14 +44,13 @@ export default defineEventHandler(async (event: H3Event): Promise<ConversionResu
     logs.push(`Server directory: ${serverDir}`)
     logs.push(`Command directory: ${cmdDir}`)
     logs.push(`Converted directory: ${convertedDir}`)
-    logs.push(`Input file type: ${isAVIF ? 'AVIF' : 'JPEG'}`)
+    logs.push('Input file type: JPEG')
 
     // Generate timestamp for output filename
     const timestamp = Date.now()
     const outputFileName = `origin_${timestamp}.jpg`
     const outputJpgPath = join(convertedDir, outputFileName)
-    const inputExt = isAVIF ? '.avif' : '.jpg'
-    const inputPath = join(convertedDir, `input_${timestamp}${inputExt}`)
+    const inputPath = join(convertedDir, `input_${timestamp}.jpg`)
 
     try {
       // Save uploaded file to converted directory
@@ -69,9 +68,8 @@ export default defineEventHandler(async (event: H3Event): Promise<ConversionResu
 
       let outputJpgBuffer: Buffer
 
-      // Process both JPEG and AVIF through the conversion script
-      const fileTypeLabel = isJPEG ? 'JPEG HDR' : 'AVIF'
-      logs.push(`Starting ${fileTypeLabel} to Instagram-compatible HDR JPEG conversion...`)
+      const fileTypeLabel = 'JPEG HDR'
+      logs.push('Starting JPEG HDR to Instagram-compatible HDR JPEG conversion...')
 
       const convertCmd = `cd "${cmdDir}" && bash "${convertScript}" -o "${outputJpgPath}" "${inputPath}"`
       logs.push(`Executing: ${convertCmd}`)

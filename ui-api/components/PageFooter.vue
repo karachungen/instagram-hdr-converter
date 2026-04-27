@@ -14,7 +14,7 @@
               Why Your HDR Photos Look Dull on Instagram
             </h2>
             <p class="text-gray-600 dark:text-gray-400 leading-relaxed mb-3">
-              When you export <strong>HDR photos from Lightroom</strong> as AVIF and upload them to <strong>Instagram, Threads, or Google Photos</strong>, they often appear washed out or dull. This happens because these platforms require images in the <strong>ISO 21496-1 HDR format</strong> with proper gain map metadata.
+              When you export <strong>HDR photos from Lightroom</strong> as JPEG and upload them to <strong>Instagram, Threads, or Google Photos</strong>, they can still look wrong if the file is not a proper <strong>ISO 21496-1 HDR</strong> image with gain map metadata. Some exports appear washed out on these platforms.
             </p>
             <p class="text-gray-600 dark:text-gray-400 leading-relaxed">
               Our free converter transforms your Lightroom HDR exports into Instagram-compatible HDR JPEGs, preserving the full dynamic range and vibrant colors your photos deserve.
@@ -29,7 +29,7 @@
             <ul class="space-y-2 text-gray-600 dark:text-gray-400">
               <li class="flex items-start gap-2">
                 <UIcon name="i-lucide-check" class="text-green-500 mt-0.5 shrink-0" />
-                <span><strong>Validate HDR content:</strong> Checks for 10-bit color depth (AVIF) or gain map metadata (JPEG)</span>
+                <span><strong>Validate HDR content:</strong> Checks HDR JPEG gain map metadata (via libultrahdr)</span>
               </li>
               <li class="flex items-start gap-2">
                 <UIcon name="i-lucide-check" class="text-green-500 mt-0.5 shrink-0" />
@@ -50,9 +50,9 @@
         <!-- Keywords for SEO (hidden but readable by search engines) -->
         <div class="sr-only" aria-hidden="true">
           Convert HDR photos for Instagram, Fix dull HDR images on Threads, Lightroom HDR export to Instagram,
-          AVIF to HDR JPEG converter, ISO 21496-1 format converter, HDR gain map preservation,
+          HDR JPEG to ISO 21496-1, ISO 21496-1 format converter, HDR gain map preservation,
           Google Photos HDR upload, Ultra HDR converter, HDR image optimization for social media,
-          10-bit HDR AVIF to JPEG, Adobe Lightroom HDR Instagram workflow
+          Lightroom HDR JPEG Instagram workflow, Adobe Lightroom HDR
         </div>
       </div>
 

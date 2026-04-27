@@ -143,7 +143,7 @@ async function handleDownloadAll(): Promise<void> {
           No Images Processed Yet
         </h3>
         <p class="text-gray-600 dark:text-gray-400 mb-6">
-          Upload AVIF HDR images and click "Process All Images" to see before/after comparisons here.
+          Upload HDR JPEG images and click "Process All Images" to see before/after comparisons here.
         </p>
         <div class="flex items-center justify-center gap-2 text-sm text-gray-500 dark:text-gray-400">
           <UIcon name="i-lucide-zap" class="text-lg" />

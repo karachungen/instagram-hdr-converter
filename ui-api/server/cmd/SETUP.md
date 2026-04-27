@@ -8,7 +8,6 @@ This directory requires the following binaries for HDR processing:
 The libultrahdr command-line tool is required for:
 - Validating JPEG HDR files
 - Extracting and re-encoding HDR gain maps
-- AVIF to HDR JPEG conversion
 
 **Build Instructions:**
 ```bash
@@ -24,17 +23,8 @@ cmake --build build --config Release
 cp build/ultrahdr_app /path/to/ui-api/server/cmd/
 ```
 
-### 2. `magick` (Required)
-ImageMagick with UHDR support is required for AVIF to JPEG HDR conversion.
-
-**Build Instructions:**
-```bash
-# Use the provided build script in the parent directory
-cd /path/to/instagram-hdr-converter
-./build-imagemagick-with-uhdr.sh
-
-# The script will build and place the magick binary in the correct location
-```
+### 2. ImageMagick `convert` and `cjpeg` (Required)
+`convert-to-iso-hdr.sh` uses system **ImageMagick** (`convert`) and **cjpeg** (from libjpeg-turbo) for RAW → JPEG steps. Install via your OS package manager (e.g. `apt install imagemagick libjpeg-turbo-progs` or `brew install imagemagick jpeg-turbo`).
 
 ### 3. `exiftool` (Required)
 ExifTool is used for extracting gain map metadata.
@@ -53,9 +43,10 @@ To verify your setup:
    ./ultrahdr_app -h
    ```
 
-2. **Check magick with UHDR support:**
+2. **Check convert and cjpeg:**
    ```bash
-   ./magick -list configure | grep uhdr
+   convert -version
+   cjpeg -version
    ```
 
 3. **Check exiftool:**
@@ -69,6 +60,3 @@ The validation API endpoint uses `ultrahdr_app -P <image.jpg>` to check if JPEG 
 
 - **HDR JPEG**: Will output information about the gain map and HDR metadata
 - **Non-HDR JPEG**: Will fail or return no HDR information
-
-For AVIF files, ImageMagick's `identify -verbose` is used to check bit depth (must be 10-bit or higher for HDR).
-

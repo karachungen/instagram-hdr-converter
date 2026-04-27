@@ -15,7 +15,7 @@ const logsExpanded = computed({
 // SEO Meta Tags
 useSeoMeta({
   title: 'HDR Converter - Fix Dull HDR Images for Instagram & Threads | ISO 21496-1',
-  description: 'Free online HDR photo converter for Instagram, Threads, and Google Photos. Convert Lightroom HDR exports (AVIF/JPEG) to ISO 21496-1 format. Fix dull, washed-out HDR images with gain map preservation. Perfect for photographers uploading HDR content.',
+  description: 'Free online HDR photo converter for Instagram, Threads, and Google Photos. Convert Lightroom HDR JPEG exports to ISO 21496-1 format. Fix dull, washed-out HDR images with gain map preservation. Perfect for photographers uploading HDR content.',
   ogTitle: 'HDR Converter - Fix Dull HDR Images for Instagram & Threads',
   ogDescription: 'Convert Lightroom HDR photos to Instagram/Threads compatible format. Fix dull, washed-out images. Free ISO 21496-1 HDR converter with gain map preservation.',
   ogType: 'website',
@@ -42,12 +42,12 @@ useHead({
           'priceCurrency': 'USD'
         },
         'featureList': [
-          'Convert AVIF HDR to ISO 21496-1 JPEG',
+          'Convert HDR JPEG to ISO 21496-1 for Instagram',
           'Convert Lightroom HDR exports',
           'Fix dull HDR images on Instagram',
           'Preserve HDR gain maps',
           'Support for Threads and Google Photos',
-          'Validate 10-bit HDR content',
+          'Validate HDR JPEG with gain map metadata',
           'Instagram size optimization'
         ],
         'screenshot': 'https://hdr.karachun.by/screenshot.png', // Update with actual screenshot
@@ -77,7 +77,7 @@ useHead({
             'name': 'How do I convert Lightroom HDR photos for Instagram?',
             'acceptedAnswer': {
               '@type': 'Answer',
-              'text': 'Export your photos from Lightroom as AVIF with HDR Output enabled, then use this converter to transform them into Instagram-compatible ISO 21496-1 HDR JPEG format with preserved gain maps.'
+              'text': 'Export your photos from Lightroom as JPEG with HDR Output enabled, then use this converter to transform them into Instagram-compatible ISO 21496-1 HDR JPEG format with preserved gain maps.'
             }
           },
           {
@@ -97,7 +97,7 @@ useHead({
 // Initialize on mount
 onMounted(() => {
   logsStore.add('HDR Converter initialized', 'success')
-  logsStore.add('Upload AVIF or JPEG (HDR) files to convert to Instagram-compatible format', 'info')
+  logsStore.add('Upload HDR JPEG files to convert to Instagram-compatible format', 'info')
   logsStore.add('Images will be validated for HDR content and optimal size (≤1080px)', 'info')
 })
 </script>

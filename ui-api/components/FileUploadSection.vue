@@ -47,7 +47,7 @@ const triggerFileInput = () => {
       <input
         ref="fileInput"
         type="file"
-        accept=".avif,.jpg,.jpeg,image/avif,image/jpeg"
+        accept=".jpg,.jpeg,image/jpeg,image/jpg"
         multiple
         class="hidden"
         @change="handleFileSelect"
@@ -63,7 +63,7 @@ const triggerFileInput = () => {
       </p>
 
       <p class="text-sm text-gray-500 dark:text-gray-400">
-        AVIF & JPEG (HDR) files supported • Multiple files supported
+        JPEG (HDR) files supported • Multiple files supported
       </p>
 
       <div class="mt-3 text-xs text-gray-500 dark:text-gray-400 flex items-center justify-center gap-1">

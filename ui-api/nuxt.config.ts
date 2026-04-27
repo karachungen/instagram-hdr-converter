@@ -20,11 +20,11 @@ export default defineNuxtConfig({
         { name: 'viewport', content: 'width=device-width, initial-scale=1' },
         {
           name: 'description',
-          content: 'Free HDR photo converter for Instagram, Threads & Google Photos. Convert Lightroom HDR exports (AVIF/JPEG) to ISO 21496-1 format. Fix dull, washed-out HDR images. Preserve gain maps for perfect HDR display.'
+          content: 'Free HDR photo converter for Instagram, Threads & Google Photos. Convert Lightroom HDR JPEG exports to ISO 21496-1 format. Fix dull, washed-out HDR images. Preserve gain maps for perfect HDR display.'
         },
         {
           name: 'keywords',
-          content: 'HDR converter, Instagram HDR, Lightroom HDR, AVIF to HDR JPEG, ISO 21496-1, HDR gain map, Threads HDR, Google Photos HDR, dull HDR fix, HDR image converter, Ultra HDR, HDR photo upload'
+          content: 'HDR converter, Instagram HDR, Lightroom HDR, HDR JPEG to ISO 21496-1, ISO 21496-1, HDR gain map, Threads HDR, Google Photos HDR, dull HDR fix, HDR image converter, Ultra HDR, HDR photo upload'
         },
         { name: 'author', content: 'HDR Converter' },
         { name: 'robots', content: 'index, follow' },

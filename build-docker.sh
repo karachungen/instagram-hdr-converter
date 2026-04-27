@@ -1,6 +1,6 @@
 #!/bin/bash
-# Docker-compatible build script for ImageMagick with libultrahdr support
-# Can be used in both CLI and UI Docker builds
+# Docker-compatible build script for libultrahdr (ultrahdr_app)
+# Used by CLI and UI Docker builds
 
 set -e
 
@@ -35,10 +35,9 @@ print_step() {
 # Create build directory
 mkdir -p "$BUILD_DIR"
 
-print_info "Note: Using system packages for JXL and HEIF support"
-print_info "Only building libultrahdr from source (required for UHDR_WRITE_XMP)"
+print_info "Building libultrahdr from source (required for UHDR_WRITE_XMP and ultrahdr_app)"
 
-# Step 1: Build libultrahdr
+# Build libultrahdr
 print_step "Building libultrahdr"
 
 print_info "Cloning libultrahdr repository..."
@@ -69,49 +68,6 @@ fi
 
 print_success "libultrahdr installed successfully"
 
-# Step 2: Build ImageMagick
-print_step "Building ImageMagick"
-
-print_info "Cloning ImageMagick repository..."
-git clone --depth 1 https://github.com/ImageMagick/ImageMagick.git "$BUILD_DIR/ImageMagick"
-
-cd "$BUILD_DIR/ImageMagick"
-
-print_info "Generating configure script..."
-autoreconf -fiv
-
-print_info "Configuring ImageMagick with UHDR, JXL, and HEIF support..."
-PKG_CONFIG_PATH="$INSTALL_PREFIX/lib/pkgconfig:$PKG_CONFIG_PATH" \
-CPPFLAGS="-I$INSTALL_PREFIX/include" \
-LDFLAGS="-L$INSTALL_PREFIX/lib" \
-./configure \
-    --prefix="$INSTALL_PREFIX" \
-    --with-uhdr=yes \
-    --with-jxl=yes \
-    --with-heic=yes \
-    --enable-shared \
-    --disable-static \
-    --without-modules \
-    --disable-opencl \
-    --with-quantum-depth=16 \
-    --with-jpeg=yes \
-    --with-png=yes \
-    --without-perl \
-    --without-x
-
-print_info "Building ImageMagick..."
-make -j$NUM_CORES
-
-print_info "Installing ImageMagick..."
-make install
-
-# Run ldconfig on Linux
-if command -v ldconfig &> /dev/null; then
-    ldconfig
-fi
-
-print_success "ImageMagick installed successfully"
-
 # Verify installation
 print_step "Verifying installation"
 
@@ -122,24 +78,8 @@ else
     exit 1
 fi
 
-if command -v magick &> /dev/null; then
-    MAGICK_VERSION=$(magick -version 2>&1 | head -n 1)
-    print_success "ImageMagick installed: $MAGICK_VERSION"
-    
-    if magick -list configure 2>&1 | grep -q "DELEGATES.*uhdr"; then
-        print_success "UHDR support is enabled!"
-    else
-        print_error "UHDR support not found in delegates"
-        exit 1
-    fi
-else
-    print_error "magick binary not found"
-    exit 1
-fi
-
 # Cleanup
 print_info "Cleaning up build directory..."
 rm -rf "$BUILD_DIR"
 
 print_success "Build complete!"
-

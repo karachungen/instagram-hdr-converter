@@ -97,11 +97,11 @@ export function useFileProcessor(): UseFileProcessorReturn {
   }
 
   /**
-   * Validate file is AVIF or JPEG
+   * Validate file is JPEG
    */
   const validateImageFile = (file: File): boolean => {
-    const validTypes = ['image/avif', 'image/jpeg', 'image/jpg']
-    const validExtensions = ['.avif', '.jpg', '.jpeg']
+    const validTypes = ['image/jpeg', 'image/jpg']
+    const validExtensions = ['.jpg', '.jpeg']
 
     const hasValidType = validTypes.includes(file.type)
     const hasValidExtension = validExtensions.some(ext =>
@@ -128,7 +128,7 @@ export function useFileProcessor(): UseFileProcessorReturn {
     } catch (error: any) {
       return {
         isHDR: false,
-        fileType: file.name.toLowerCase().endsWith('.avif') ? 'avif' : 'jpeg',
+        fileType: 'jpeg',
         details: `Validation failed: ${error.message}`,
       }
     }
@@ -151,9 +151,9 @@ export function useFileProcessor(): UseFileProcessorReturn {
     const hdrWarnings: string[] = []
 
     for (const file of fileArray) {
-      // Validate image file (AVIF or JPEG)
+      // Validate image file (JPEG)
       if (!validateImageFile(file)) {
-        logsStore.add(`✗ Skipped ${file.name}: Only AVIF and JPEG files are supported`, 'error')
+        logsStore.add(`✗ Skipped ${file.name}: Only JPEG files are supported`, 'error')
         continue
       }
 
@@ -387,7 +387,7 @@ export function useFileProcessor(): UseFileProcessorReturn {
 
       // Convert base64 results to blob URLs
       const finalJpgBlob = base64ToBlob(response.outputJpg, 'image/jpeg')
-      const originalAvifUrl = URL.createObjectURL(fileObj.file)
+      const originalImageUrl = URL.createObjectURL(fileObj.file)
 
       // Extract or use provided SDR image
       let sdrImageUrl: string
@@ -414,7 +414,7 @@ export function useFileProcessor(): UseFileProcessorReturn {
 
       const result: ProcessResult = {
         success: true,
-        originalImage: originalAvifUrl,
+        originalImage: originalImageUrl,
         finalJpg: finalJpgBlob,
         sdrImage: sdrImageUrl,
         gainMapImage: gainMapUrl,
@@ -431,7 +431,7 @@ export function useFileProcessor(): UseFileProcessorReturn {
 
       // Track successful conversion
       trackGAAnalytics('hdr_conversion_success', {
-        file_type: fileObj.name.toLowerCase().includes('.avif') ? 'avif' : 'jpeg',
+        file_type: 'jpeg',
         file_size: Math.round(fileObj.size / 1024), // KB
         conversion_time: Date.now() - (fileObj.createdAt || Date.now()),
         event_category: 'hdr_conversion',
@@ -451,7 +451,7 @@ export function useFileProcessor(): UseFileProcessorReturn {
 
       // Track conversion error
       trackGAAnalytics('hdr_conversion_error', {
-        file_type: fileObj.name.toLowerCase().includes('.avif') ? 'avif' : 'jpeg',
+        file_type: 'jpeg',
         error_message: errorMsg.substring(0, 100), // Limit error message length
         event_category: 'hdr_conversion',
       })
@@ -470,7 +470,7 @@ export function useFileProcessor(): UseFileProcessorReturn {
       logsStore.add('No files selected', 'error')
       toast.add({
         title: 'No Files',
-        description: 'Please upload AVIF files first',
+        description: 'Please upload JPEG files first',
         icon: 'i-lucide-alert-circle',
         color: 'warning',
       })
